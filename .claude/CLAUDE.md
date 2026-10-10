@@ -26,7 +26,7 @@ Kotlin で作る Android アプリ。AWS の DynamoDB に保存された温度�
 
 ## プロジェクト構成
 
-- `core/`: 純粋な Kotlin (Android に依存しない)。AWS のクライアント (`CognitoUnauthenticatedCredentials`、`DynamoDbReadings`)、測定値 (`Reading`)、表示用の文字列 (`formatReading`、`formatTemperature`)。**単体テストで、行と分岐のカバレッジ 100%。**
+- `core/`: 純粋な Kotlin (Android に依存しない)。AWS のクライアント (`CognitoUnauthenticatedCredentials`、`DynamoDbReadings`)、測定値 (`Reading`)、表示用の文字列 (`formatReading`、`formatTemperature`、`formatChartTime`、`formatChartValue`)、グラフ用のデータ (`ChartRange`、`buildChartSeries`)、画面に表示する内容 (`loadSnapshot`)。**単体テストで、行と分岐のカバレッジ 100%。**
 - `app/`: Android。画面と、設定の読み込み (`BuildConfig`) だけの、薄い層。ロジックは、`core` に置く (UI は、単体テストの対象外)。
 - `gradle/libs.versions.toml`: ライブラリとプラグインの版 (版カタログ)。版を変えるときは、ここだけ。
 - `config/detekt/detekt.yml`: detekt の規則 (既定に、上書きするものだけ)。
@@ -101,7 +101,7 @@ ktlint (Kotlin 公式のスタイル) と、detekt (既定の規則) に従う�
 - **カバレッジ**: `core` の行と分岐は、100% (JaCoCo の `jacocoTestCoverageVerification`)。ソースを足したり、関数を変えたりしたら、対応するテストを足す (正常系と、エラーの伝わり方)。到達しない分岐を作らない (到達しない `?: return` などを、書かない)。
 - **テストの名前**: `<対象の関数名><条件>` を、キャメルケースで (例: `resolveFailsWithoutIdentityId`)。KDoc で、何を確認するかを書く。
 - **時刻と乱数**: 外の状態は、引数で渡して、固定する (`CognitoUnauthenticatedCredentials` の `now` のように)。実際の時計を使う動作は、別に 1 つだけ、テストする。
-- **実機と AWS での確認は、別に必要**: 実際の AWS への接続 (ID プール、テーブル、権限)、画面の表示、実機へのインストールは、単体テストでは、確認できない (今の文字列の表示は、実機で確認済み。画面を変えたら、また確認する)。
+- **実機と AWS での確認は、別に必要**: 実際の AWS への接続 (ID プール、テーブル、権限)、画面の表示、実機へのインストールは、単体テストでは、確認できない (文字列の表示は、実機で確認済み。グラフの表示は、エミュレータで確認した。実機では、まだ確認していない。画面を変えたら、また確認する)。
 
 ## 落とし穴 (検証で分かったこと。詳細は SETUP.md)
 

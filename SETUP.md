@@ -91,8 +91,12 @@ config/detekt/detekt.yml         detekt の規則 (既定に, 上書きするも
 core/                            純粋な Kotlin (AWS のクライアントと, データの処理). カバレッジ 100%
   CognitoUnauthenticatedCredentials  Cognito の未認証の ID から, 一時的な認証情報を受け取る
   DynamoDbReadings (ReadingsRepository) DynamoDB の Query で, 機器の測定値を取り出す
-  Reading, formatReading         測定値と, 表示用の文字列
-app/                             Android (画面だけの薄い層. 設定の読み込みと, 最新値の表示)
+  Reading, formatReading         測定値と, 表示用の文字列 (formatChartTime, formatChartValue も)
+  Chart                          グラフ用のデータ (範囲, 平均, 線の切れ目, 縦軸の範囲)
+  NodeSnapshot                   1 台の機器の, 最新の値と, 温度と湿度のグラフ (loadSnapshot)
+app/                             Android (画面だけの薄い層. 設定の読み込みと, 描画)
+  MainActivity                   画面 (範囲のボタンと, 機器ごとの表示)
+  NodeSection, LineChartView     機器ごとの表示と, 折れ線グラフ (Canvas. ライブラリなし)
 ```
 
 ## コマンド
@@ -169,6 +173,9 @@ AWS 側の準備 (テーブル `thermo-readings`、IoT のルール、ID プー�
 | `DynamoDbReadings` (`ReadingsRepository`) | `range(node, 開始, 終了)`: 機器の、時刻の範囲の値を、古い順に取り出す (結果が 1 MB を超えるときは、`lastEvaluatedKey` で続きを取り出す)。`latest(node)`: 最新の 1 件を取り出す |
 | `Reading` | 1 件の測定値 (`node`、`ts`、`type`、`temperatureC`、`humidity`、`battery`)。`temperature_c` などが、ない、または、数値として読めない項目は、除く |
 | `formatReading` | 測定値を、1 行の文字列にする (時刻は、指定したタイムゾーン) |
+| `ChartRange` | グラフの範囲 (1 時間、6 時間、24 時間)。現在から、過去に向かう窓と、平均する区切りの長さ (どの範囲も、線の点は 120 個) を決める |
+| `buildChartSeries` | 測定値を、区切りごとに平均して、グラフの 1 本の線にする。測定値のない区切りが、2 つを超えて続いたら、線を切る (機器が止まっていた間を、つながない)。縦軸の範囲は、値の最小と最大に 5% の余白を足したもので、幅が最小の幅 (温度は 1 ℃、湿度は 5%) より小さいときは、広げる |
+| `loadSnapshot` / `NodeSnapshot` | 1 台の機器の、最新の測定値と、範囲の中の測定値を取り出して、温度と湿度のグラフにする。取り出しの失敗は、そのまま伝える (画面に表示する) |
 
 ### 設定
 
@@ -197,7 +204,7 @@ thermon.nodes=AA:BB:CC:DD:EE:01,AA:BB:CC:DD:EE:02
 - **単体テスト**: Cognito と DynamoDB のクライアントを、MockK で偽物にして、認証情報の取得とキャッシュ、期限での取り直し、同時の呼び出し、応答に項目がないときの例外、`Query` の要求 (キー条件、`lastEvaluatedKey`、新しい順の 1 件)、読めない項目の除外を、確認しています (`core` の行と分岐のカバレッジ 100%)。
 - **ビルド**: 設定が、`BuildConfig` に入ることと、設定がないときに、空になることを、確認しました。
 - **実機で確認済み** (2026-10-10): AWS の準備 ([AWS_DYNAMODB.md](AWS_DYNAMODB.md)) をして、`local.properties` に書き、実機の Android 端末に入れて、起動しました。実際の AWS (Cognito の ID プール、DynamoDB のテーブル、未認証ロール) に接続して、機器ごとの最新の測定値(温度、湿度、受信した時刻)が、**文字列で**表示されることを確認しました。手順は、次の「アプリを動かして確認する」です。
-- **未実装**: グラフの表示。今は、機器ごとの最新の 1 件を、文字列で表示するだけです (「決めていないこと」)。
+- **グラフの表示** (Android のエミュレータで確認済み): 機器ごとに、最新の測定値の 1 行と、温度 (橙) と湿度 (青) の折れ線グラフを表示します。実際の AWS のデータが、描かれることと、範囲のボタン (1 h、6 h、24 h) で、横軸と線が変わることを確認しました。**実機での表示は、まだ確認していません。** 縦軸の値、横軸の開始と終了の時刻 (端末のタイムゾーン) も、表示します。測定値のない範囲は、「No data in this range」と表示します。
 
 ## エミュレータ (Docker)
 
@@ -331,7 +338,7 @@ AWS の準備 ([AWS_DYNAMODB.md](AWS_DYNAMODB.md)) が終わったあとの手�
    - インストールの確認は、`adb shell pm list packages | grep thermon` (`package:jp.thermon.app` と出れば成功)。
 
 6. **表示を確認する**
-   - 正常なら、機器ごとに、温度、湿度、受信した時刻が、1 行ずつ、文字列で表示されます。
+   - 正常なら、画面の上に、範囲を選ぶボタン (1 h、6 h、24 h。選んでいるボタンは、薄く表示される。既定は 6 h) が出ます。その下に、機器ごとに、最新の温度、湿度、受信した時刻の 1 行と、温度と湿度のグラフが出ます。ボタンを押すと、その範囲で取り出し直します (取り出している間は、「Loading…」)。
    - 「AWS is not configured」と出るなら、`thermon.identityPoolId` か `thermon.nodes` が空です。直して、ビルドし直します。
 
 うまくいかないとき:
@@ -375,7 +382,7 @@ Push 時に、`.github/workflows/build.yml` が、開発用の Docker イメー�
 
 次は、まだ決めていません。決まったら、このドキュメントと、README に、書き足します。
 
-- **AWS で読み取る範囲の使い方**: 今は、機器ごとの最新の 1 件を表示するだけです。グラフ (`range` を使う)、機器の一覧 (テーブルのキーは、機器の指定が必要で、一覧は、アプリの設定に持つ)、更新の間隔は、これから決めます。
-- **画面の作り方**: Jetpack Compose か、通常のビュー (View) か。
+- **AWS で読み取る範囲の使い方**: 機器ごとの最新の 1 件と、範囲 (1 時間、6 時間、24 時間) のグラフは、実装しました。機器の一覧 (テーブルのキーは、機器の指定が必要で、一覧は、アプリの設定に持つ)、自動の更新 (今は、起動したときと、範囲のボタンを押したときだけ取り出す)、より長い範囲 (7 日など。件数が多いので、取り出しの分け方を決める) は、これから決めます。
+- **画面の作り方**: 通常のビュー (View) と、Canvas で描くカスタム View (`LineChartView`) にしました (ライブラリを増やさないため)。Jetpack Compose は、使っていません。
 - **アプリの ID (`applicationId`) と、リリースの署名**。
 - **整形と静的解析の規則の詳細**: 今は、ktlint と detekt の既定の規則に、最小の設定 (`.editorconfig`、`config/detekt/detekt.yml`) だけです。コーディング規約は、`CODING_STYLE.md` に、まとめる予定です。
