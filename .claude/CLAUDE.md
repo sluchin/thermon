@@ -65,7 +65,13 @@ ktlint (Kotlin 公式のスタイル) と、detekt (既定の規則) に従う�
 ## 開発フロー
 
 1. 機能開発は、`ccr-*` ブランチで行う。
-2. GitHub Actions の CI は、まだない (`SETUP.md` の「決めていないこと」)。作るときは、esp32-thermo-system の `.github/workflows/build.yml` と、同じ方式にする (Docker のイメージを使い、`docker compose` のサービスを実行する)。
+2. Push 時に GitHub Actions (`.github/workflows/build.yml`) が、開発用の Docker イメージ (ローカルと同じ環境) で、`docker compose` のサービスを実行する (`SETUP.md` の「CI (GitHub Actions)」)。
+   - `check` ジョブ: `build` / `test` / `coverage` / `format` / `analyze` を、サービスごとに実行する。失敗したら、ジョブが失敗する。実行のログを、アーティファクト (`<サービス名>_log`。`build_log` など) として保存する (失敗したときも保存する)。**APK は、アーティファクトに置かない。**
+   - `docs` ジョブ: `docs` (Dokka の HTML。警告があれば失敗する)。生成したドキュメントを、アーティファクト `docs` と、ログ `docs_log` に保存する。
+   - `deploy-docs` ジョブ: main への push のときだけ、ドキュメントを GitHub Pages に公開する (リポジトリの Settings > Pages > Source を「GitHub Actions」にしておく)。
+   - `cleanup` ジョブ: 3 日より前の実行 (ログと artifact) を、push のたびに削除する (権限は `actions: write`)。artifact は、`retention-days: 3` で、3 日で期限が切れる。保存する期間を変えるときは、`build.yml` の `KEEP_DAYS` と、全ての `retention-days` を、そろえて変える。
+   - Docker イメージは、レイヤーを GitHub Actions のキャッシュに保存する (`.github/actions/docker-image`)。Gradle の依存関係も、キャッシュに保存する (`.github/actions/gradle-cache`。`GRADLE_HOME_DIR`)。
+   - アーティファクトの名前は、小文字のスネークケースにする。
 
 ### コード修正時のルール
 

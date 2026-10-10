@@ -125,7 +125,7 @@ docker compose run --rm clean
 
 Gradle のキャッシュ (依存関係のダウンロード) も、消すときは、`docker compose down -v` で、ボリューム `gradle-cache` を消します (次の実行で、ダウンロードし直します)。
 
-コードを修正したら、`format-fix`、`format`、`analyze`、`test`、`coverage`、`build` の順に、全て通ることを確認します (CI も、同じサービスを実行する予定です。未検証)。
+コードを修正したら、`format-fix`、`format`、`analyze`、`test`、`coverage`、`build` の順に、全て通ることを確認します (CI も、同じサービスを実行します。「CI (GitHub Actions)」)。
 
 ### Gradle のタスクを直接実行する
 
@@ -343,6 +343,24 @@ AWS の準備 ([AWS_DYNAMODB.md](AWS_DYNAMODB.md)) が終わったあとの手�
 | 表示が空 | `thermon.nodes` と、DynamoDB の `node` が一致しているか。手順 1 でデータが入っているか |
 | そのほか | `adb logcat -d \| tail -50` で、エラーを見る |
 
+## CI (GitHub Actions)
+
+Push 時に、`.github/workflows/build.yml` が、開発用の Docker イメージ (Dockerfile の `dev` ステージ) で、`docker compose` のサービスを実行します。ローカルと同じ環境です。
+
+| ジョブ | 実行するサービス | 内容 |
+|:---|:---|:---|
+| `check` | `build` / `test` / `coverage` / `format` / `analyze` | 1 サービスずつ、別のジョブで実行する。失敗したら、ジョブが失敗する。ログを、アーティファクト `<サービス名>_log` に保存する |
+| `docs` | `docs` | Dokka の HTML を生成する。警告があれば失敗する。生成物を、アーティファクト `docs` に、ログを `docs_log` に保存する |
+| `deploy-docs` | (`docs` の成果物) | main への push のときだけ、ドキュメントを GitHub Pages へ公開する |
+| `cleanup` | (なし) | 3 日より前の実行 (ログと artifact) を、push のたびに削除する |
+
+- 実行するのは、`main` と `ccr-*` ブランチへの push と、main への PR です。
+- **APK は、アーティファクトに置きません** (ログだけを保存します)。
+- アーティファクトは、`retention-days: 3` で、3 日で期限が切れます。保存する期間を変えるときは、`build.yml` の `KEEP_DAYS` と、全ての `retention-days` を、そろえて変えます。
+- Docker イメージは、レイヤーを GitHub Actions のキャッシュに保存します (`.github/actions/docker-image`)。Gradle の依存関係と、Gradle 本体も、キャッシュに保存します (`.github/actions/gradle-cache`)。`docker-compose.yml` の `GRADLE_HOME_DIR` に、キャッシュするディレクトリを指定すると、ボリューム `gradle-cache` の代わりに、そのディレクトリを使います (ローカルでは、指定しない)。
+- **GitHub Pages の設定** (最初の 1 回): リポジトリの Settings > Pages > Source を「GitHub Actions」にします。公開されるのは、`core` の API ドキュメント (Dokka) です。`SETUP.md` などの Markdown の文書は、含まれません。
+- **未検証**: GitHub Actions 上での実行 (ワークフローは、YAML の構文と、`GRADLE_HOME_DIR` でのローカルの実行だけを確認した)。最初の実行で、イメージのビルドと、Gradle の依存関係の取得に、時間がかかります。
+
 ## 注意 (検証で分かったこと)
 
 - **`compileSdk` は 37 以上にする。** AWS SDK for Kotlin が使う OkHttp 5.5 が、`compileSdk` 37 以上を要求します (36 だと、`checkDebugAarMetadata` が失敗します)。`targetSdk` も、Android Lint の `OldTargetApi` のため、最新 (37) にします。
@@ -360,5 +378,4 @@ AWS の準備 ([AWS_DYNAMODB.md](AWS_DYNAMODB.md)) が終わったあとの手�
 - **AWS で読み取る範囲の使い方**: 今は、機器ごとの最新の 1 件を表示するだけです。グラフ (`range` を使う)、機器の一覧 (テーブルのキーは、機器の指定が必要で、一覧は、アプリの設定に持つ)、更新の間隔は、これから決めます。
 - **画面の作り方**: Jetpack Compose か、通常のビュー (View) か。
 - **アプリの ID (`applicationId`) と、リリースの署名**。
-- **CI**: GitHub Actions で、上のサービスを実行する予定です。Docker のイメージは、レイヤーのキャッシュを使います (esp32-thermo-system の `.github/actions/docker-image` と同じ方式)。
 - **整形と静的解析の規則の詳細**: 今は、ktlint と detekt の既定の規則に、最小の設定 (`.editorconfig`、`config/detekt/detekt.yml`) だけです。コーディング規約は、`CODING_STYLE.md` に、まとめる予定です。

@@ -125,6 +125,10 @@ docker compose exec emulator adb shell am start -n jp.thermon.app/.MainActivity
 
 コードを修正したら、`format-fix`、`format`、`analyze`、`test`、`coverage`、`build`、`docs` の順に、全て成功することを確認します。コーディング規約、テストの方針、コミットの書き方は、[.claude/CLAUDE.md](.claude/CLAUDE.md) にあります。
 
+## CI
+
+Push 時に、GitHub Actions が、開発用の Docker イメージで、`build` `test` `coverage` `format` `analyze` `docs` を実行します。ログは、アーティファクトに保存します (APK は、置きません)。main への push では、ドキュメント (Dokka) を、GitHub Pages に公開します。詳しくは、[SETUP.md](SETUP.md) の「CI (GitHub Actions)」です。
+
 ## ドキュメント
 
 - [AWS_CLI.md](AWS_CLI.md): AWS CLI の準備 (インストール、`aws login`、IAM ユーザーとアクセスキー、CloudShell)。
