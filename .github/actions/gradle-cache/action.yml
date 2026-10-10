@@ -1,0 +1,22 @@
+name: Cache the Gradle home
+description: >
+  Gradle のキャッシュ (依存関係, Gradle 本体, Android のデバッグ鍵) を, GitHub Actions のキャッシュに保存する.
+  ディレクトリを作って, 環境変数 GRADLE_HOME_DIR に設定する. docker-compose.yml は, この変数が
+  あれば, ボリューム gradle-cache の代わりに, そのディレクトリをコンテナの /gradle-home にする.
+  使う前に, actions/checkout を実行しておくこと.
+
+runs:
+  using: composite
+  steps:
+    - name: Restore the Gradle cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ runner.temp }}/gradle-home
+        key: gradle-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'gradle/libs.versions.toml', '**/*.gradle.kts', 'gradle.properties') }}
+        restore-keys: gradle-
+
+    - name: Prepare the Gradle home
+      shell: bash
+      run: |
+        mkdir -p "${RUNNER_TEMP}/gradle-home"
+        echo "GRADLE_HOME_DIR=${RUNNER_TEMP}/gradle-home" >> "${GITHUB_ENV}"

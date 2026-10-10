@@ -1,0 +1,139 @@
+name: CI
+
+# 開発環境 (Dockerfile) と同じイメージで, docker compose のサービスを実行する.
+#   build   : デバッグ用の APK のビルド. 警告が出たら失敗する. ログを artifact に保存する (APK は, 保存しない)
+#   test    : 単体テスト. ログを artifact に保存する
+#   coverage: core の行と分岐のカバレッジが 100% であること. ログを artifact に保存する
+#   format  : 整形の確認 (ktlint). 指摘があれば失敗する. ログを artifact に保存する
+#   analyze : 静的解析 (detekt と Android Lint). 指摘があれば失敗する. ログを artifact に保存する
+#   docs    : ドキュメント (Dokka の HTML). 警告があれば失敗する. ドキュメントとログを artifact に保存する
+#   deploy-docs: main への push のときだけ, ドキュメントを GitHub Pages へ公開する
+#   cleanup : 3 日より前の実行 (ログと artifact) を, push のたびに削除する. artifact は, 3 日で期限が切れる (retention-days)
+# イメージは, レイヤーを GitHub Actions のキャッシュに保存する (.github/actions/docker-image).
+# Gradle の依存関係も, キャッシュに保存する (.github/actions/gradle-cache).
+
+on:
+  push:
+    branches: [ main, ccr-* ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  check:
+    name: ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [ build, test, coverage, format, analyze ]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build the development image
+        uses: ./.github/actions/docker-image
+
+      - name: Cache the Gradle home
+        uses: ./.github/actions/gradle-cache
+
+      - name: Run ${{ matrix.service }}
+        run: |
+          set -o pipefail
+          env UID="$(id -u)" GID="$(id -g)" docker compose run --rm ${{ matrix.service }} 2>&1 | tee "$RUNNER_TEMP/${{ matrix.service }}.log"
+
+      - name: Upload the log
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ matrix.service }}_log
+          path: ${{ runner.temp }}/${{ matrix.service }}.log
+          if-no-files-found: warn
+          retention-days: 3
+
+  docs:
+    name: docs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build the development image
+        uses: ./.github/actions/docker-image
+
+      - name: Cache the Gradle home
+        uses: ./.github/actions/gradle-cache
+
+      - name: Generate the documentation (Dokka, no warnings allowed)
+        run: |
+          set -o pipefail
+          env UID="$(id -u)" GID="$(id -g)" docker compose run --rm docs 2>&1 | tee "$RUNNER_TEMP/docs.log"
+
+      - name: Upload the documentation
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: docs
+          path: core/build/dokka/html/
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Upload the documentation log
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: docs_log
+          path: ${{ runner.temp }}/docs.log
+          if-no-files-found: warn
+          retention-days: 3
+
+      - name: Upload the documentation for GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: core/build/dokka/html/
+
+  # main への push のときだけ, 生成したドキュメントを GitHub Pages へ公開する.
+  # リポジトリの Settings > Pages > Source を "GitHub Actions" にしておくこと.
+  deploy-docs:
+    name: Deploy the documentation
+    needs: docs
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  # 3 日より前の実行 (ログと artifact) を削除する. 実行中のものは, 3 日より前に始まっていても, 削除できないので, 無視する
+  cleanup:
+    name: Delete the old runs
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      KEEP_DAYS: 3
+
+    steps:
+      - name: Delete the runs older than KEEP_DAYS
+        run: |
+          cutoff="$(date -u -d "${KEEP_DAYS} days ago" +%Y-%m-%dT%H:%M:%SZ)"
+          echo "Deleting the runs created before ${cutoff}"
+          gh api --paginate -X GET "repos/${GITHUB_REPOSITORY}/actions/runs" \
+            -f per_page=100 -f created="<${cutoff}" --jq '.workflow_runs[].id' |
+            while read -r id; do
+              echo "Delete the run ${id}"
+              gh api -X DELETE "repos/${GITHUB_REPOSITORY}/actions/runs/${id}" || true
+            done
