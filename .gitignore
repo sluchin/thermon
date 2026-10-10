@@ -25,3 +25,20 @@ replay_pid*
 
 # Kotlin Gradle plugin data, see https://kotlinlang.org/docs/whatsnew20.html#new-directory-for-kotlin-data-in-gradle-projects
 .kotlin/
+
+# Gradle のラッパーの jar は, コミットする (上の *.jar の例外)
+!gradle/wrapper/gradle-wrapper.jar
+
+# Gradle の生成物と, 個人の設定
+.gradle/
+build/
+local.properties
+
+# Android Studio など, エディタの設定
+.idea/
+*.iml
+.vscode/
+
+# 署名の鍵 (リリース用の鍵を, コミットしない)
+*.jks
+*.keystore
