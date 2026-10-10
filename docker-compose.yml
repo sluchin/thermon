@@ -8,7 +8,9 @@ x-common: &common
   image: thermon-dev:latest
   volumes:
     - .:/workspace
-    - gradle-cache:/gradle-home
+    # Gradle のキャッシュ. 既定は, ボリューム gradle-cache. CI は, GRADLE_HOME_DIR に, キャッシュするディレクトリ
+    # (絶対パス) を指定して, ボリュームの代わりに, そのディレクトリを使う (.github/actions/gradle-cache)
+    - ${GRADLE_HOME_DIR:-gradle-cache}:/gradle-home
   working_dir: /workspace
   user: "${UID:-0}:${GID:-0}"
   environment:
