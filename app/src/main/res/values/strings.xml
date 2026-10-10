@@ -2,4 +2,14 @@
 <resources>
     <string name="not_configured">AWS is not configured. Set thermon.identityPoolId and thermon.nodes in local.properties.</string>
     <string name="loading">Loading…</string>
+    <string name="no_data">%1$s  (no data)</string>
+    <string name="error">%1$s  Error: %2$s</string>
+    <string name="range_1h">1 h</string>
+    <string name="range_6h">6 h</string>
+    <string name="range_24h">24 h</string>
+    <string name="temperature_title">Temperature</string>
+    <string name="humidity_title">Humidity</string>
+    <string name="temperature_unit" translatable="false">°C</string>
+    <string name="humidity_unit" translatable="false" formatted="false">%</string>
+    <string name="chart_no_data">No data in this range</string>
 </resources>
