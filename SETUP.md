@@ -326,7 +326,7 @@ AWS の準備 ([AWS_DYNAMODB.md](AWS_DYNAMODB.md)) が終わったあとの手�
    ```
 
 5. **アプリを開く**
-   - 端末のアプリ一覧から、**`thermon`** をタップします (標準のアイコン。見つからないときは、一覧の検索欄に「thermon」と入力します)。
+   - 端末のアプリ一覧から、**`thermon`** をタップします (温度計のアイコン。見つからないときは、一覧の検索欄に「thermon」と入力します)。
    - PC から起動するときは、`adb shell am start -n jp.thermon.app/.MainActivity` です。
    - インストールの確認は、`adb shell pm list packages | grep thermon` (`package:jp.thermon.app` と出れば成功)。
 
