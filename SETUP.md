@@ -2,7 +2,7 @@
 
 このドキュメントは、Kotlin で Android アプリ (AWS のクライアント) を、**Android Studio を使わずに、コマンドラインだけで**開発するための環境構築手順です。ビルド、テスト、整形、静的解析、ドキュメントの生成は、Docker の中で実行します (姉妹プロジェクトの [esp32-thermo-system](https://github.com/sluchin/esp32-thermo-system) と同じ方針です)。
 
-> **このドキュメントの状態**: `Dockerfile`、`docker-compose.yml`、Gradle のプロジェクトの雛形 (`core` と `app`) は、リポジトリにあります。下の全てのサービスを、実際に実行して、成功することを確認しました (2026-10-10。Ubuntu 24.04 の Docker イメージ)。整形、静的解析、カバレッジ、ドキュメント、コンパイラの警告のチェックが、違反のあるファイルで、**正しく失敗する**ことも、確認しました。確認していない項目は、「未検証」と書いてあります (実機への転送、CI)。
+> **このドキュメントの状態**: `Dockerfile`、`docker-compose.yml`、Gradle のプロジェクトの雛形 (`core` と `app`) は、リポジトリにあります。下の全てのサービスを、実際に実行して、成功することを確認しました (2026-10-10。Ubuntu 24.04 の Docker イメージ)。整形、静的解析、カバレッジ、ドキュメント、コンパイラの警告のチェックが、違反のあるファイルで、**正しく失敗する**ことも、確認しました。実機への転送と、実際の AWS への接続、文字列の表示は、実機で確認しました (2026-10-10。「アプリを動かして確認する」)。確認していない項目は、「未検証」と書いてあります (CI、エミュレータからの AWS への接続、無線のデバッグ)。
 
 ## 方針
 
@@ -196,7 +196,8 @@ thermon.nodes=AA:BB:CC:DD:EE:01,AA:BB:CC:DD:EE:02
 
 - **単体テスト**: Cognito と DynamoDB のクライアントを、MockK で偽物にして、認証情報の取得とキャッシュ、期限での取り直し、同時の呼び出し、応答に項目がないときの例外、`Query` の要求 (キー条件、`lastEvaluatedKey`、新しい順の 1 件)、読めない項目の除外を、確認しています (`core` の行と分岐のカバレッジ 100%)。
 - **ビルド**: 設定が、`BuildConfig` に入ることと、設定がないときに、空になることを、確認しました。
-- **未検証**: 実際の AWS (ID プール、テーブル) への接続と、実機での画面の表示。ID プールとテーブルを作って、`local.properties` に書いて、実機に入れて、確認してください。
+- **実機で確認済み** (2026-10-10): AWS の準備 ([AWS_DYNAMODB.md](AWS_DYNAMODB.md)) をして、`local.properties` に書き、実機の Android 端末に入れて、起動しました。実際の AWS (Cognito の ID プール、DynamoDB のテーブル、未認証ロール) に接続して、機器ごとの最新の測定値(温度、湿度、受信した時刻)が、**文字列で**表示されることを確認しました。手順は、次の「アプリを動かして確認する」です。
+- **未実装**: グラフの表示。今は、機器ごとの最新の 1 件を、文字列で表示するだけです (「決めていないこと」)。
 
 ## エミュレータ (Docker)
 
@@ -252,7 +253,7 @@ docker compose down
 - 同じ署名の APK を、上書きでインストールできる (下の「デバッグ用の署名の鍵」)。
 - noVNC のページが、`http://localhost:6080/vnc.html` で、応答する (HTTP 200)。
 
-**未検証**: ブラウザでの表示と、マウスの操作。エミュレータの中から、AWS (Cognito と DynamoDB) に、接続すること (ID プールとテーブルが、まだない)。
+**未検証**: ブラウザでの表示と、マウスの操作。エミュレータの中から、AWS (Cognito と DynamoDB) に、接続すること (ID プールとテーブルは、作った。実機では確認したが、エミュレータでは、まだ試していない)。
 
 ### 注意 (動かして分かったこと)
 
@@ -281,9 +282,66 @@ adb は、ホストで実行します (Docker に、USB を渡す設定を避け
 
 5. ログを見るときは、`adb logcat` を使います (`adb logcat -s <タグ>` で絞れます)。
 
+インストールしたあとの、アプリの起動と確認は、次の「アプリを動かして確認する」です。
+
 無線で接続するときは、端末の「ワイヤレス デバッグ」を有効にして、`adb pair <アドレス>:<ポート>` で、ペアリングして、`adb connect <アドレス>:<ポート>` で、接続します (未検証)。
 
 エミュレータは、Docker の中で動かせます (次の節の「エミュレータ (Docker)」)。
+
+## アプリを動かして確認する
+
+AWS の準備 ([AWS_DYNAMODB.md](AWS_DYNAMODB.md)) が終わったあとの手順です (実機で確認しました)。
+
+1. **AWS にデータが入っているか確認する** (アプリより先に)
+
+   ```bash
+   aws dynamodb scan --region ap-northeast-1 --table-name thermo-readings --max-items 5
+   ```
+
+   項目が返れば、ゲートウェイ、IoT Core、ルール、DynamoDB が動いています。空なら、[AWS_DYNAMODB.md](AWS_DYNAMODB.md) の 5 章の「何も入らないとき」を見ます。
+
+2. **`local.properties` に接続先を書く** (リポジトリの直下。コミットしない)
+
+   ```properties
+   thermon.region=ap-northeast-1
+   thermon.identityPoolId=<6.1 の IdentityPoolId>
+   thermon.table=thermo-readings
+   thermon.nodes=<機器の MAC アドレス (コンマ区切り)>
+   ```
+
+   `thermon.nodes` は、DynamoDB の `node` と、**同じ MAC アドレス** (大文字・小文字も、コロンも同じ) にします。
+
+3. **ビルドする** (値を変えたら、ビルドし直す)
+
+   ```bash
+   docker compose run --rm build
+   ```
+
+   APK は、`app/build/outputs/apk/debug/app-debug.apk` にできます。
+
+4. **端末に入れる** (前の節の手順で、USB デバッグを有効にして、接続しておく)
+
+   ```bash
+   adb install -r app/build/outputs/apk/debug/app-debug.apk
+   ```
+
+5. **アプリを開く**
+   - 端末のアプリ一覧から、**`thermon`** をタップします (標準のアイコン。見つからないときは、一覧の検索欄に「thermon」と入力します)。
+   - PC から起動するときは、`adb shell am start -n jp.thermon.app/.MainActivity` です。
+   - インストールの確認は、`adb shell pm list packages | grep thermon` (`package:jp.thermon.app` と出れば成功)。
+
+6. **表示を確認する**
+   - 正常なら、機器ごとに、温度、湿度、受信した時刻が、1 行ずつ、文字列で表示されます。
+   - 「AWS is not configured」と出るなら、`thermon.identityPoolId` か `thermon.nodes` が空です。直して、ビルドし直します。
+
+うまくいかないとき:
+
+| 症状 | 確認すること |
+|:---|:---|
+| 認証のエラー (`NotAuthorizedException` など) | ID プールで、未認証 ID が有効か (6.1 の `--allow-unauthenticated-identities`) |
+| 権限のエラー (`AccessDeniedException`) | 未認証ロールが ID プールに登録されているか (`aws cognito-identity get-identity-pool-roles`)。ポリシーの `Resource` (アカウント ID、テーブル名) |
+| 表示が空 | `thermon.nodes` と、DynamoDB の `node` が一致しているか。手順 1 でデータが入っているか |
+| そのほか | `adb logcat -d \| tail -50` で、エラーを見る |
 
 ## 注意 (検証で分かったこと)
 

@@ -22,7 +22,7 @@ Kotlin で作る Android アプリ。AWS の DynamoDB に保存された温度�
 - エミュレータ (KVM。`export KVM_GID=$(getent group kvm | cut -d: -f3)` が要る。イメージは約 10.7 GB): `docker compose build emulator` → `docker compose up -d emulator` → `docker compose exec emulator scripts/emulator-wait.sh` → `docker compose exec emulator adb install -r app/build/outputs/apk/debug/app-debug.apk`。画面は <http://localhost:6080/vnc.html>、画像にするときは `adb exec-out screencap -p > build/emulator-screen.png`。止めるのは `docker compose down` (`SETUP.md` の「エミュレータ (Docker)」) (中で `./gradlew ...` を、直接実行できる)
 
 ### 実機への転送 (ホストの adb)
-- `adb install -r app/build/outputs/apk/debug/app-debug.apk` (ホストに adb を入れる。`SETUP.md` の「実機へのインストール」。未検証)
+- `adb install -r app/build/outputs/apk/debug/app-debug.apk` (ホストに adb を入れる。`SETUP.md` の「実機へのインストール」と「アプリを動かして確認する」。実機で確認済み)
 
 ## プロジェクト構成
 
@@ -95,7 +95,7 @@ ktlint (Kotlin 公式のスタイル) と、detekt (既定の規則) に従う�
 - **カバレッジ**: `core` の行と分岐は、100% (JaCoCo の `jacocoTestCoverageVerification`)。ソースを足したり、関数を変えたりしたら、対応するテストを足す (正常系と、エラーの伝わり方)。到達しない分岐を作らない (到達しない `?: return` などを、書かない)。
 - **テストの名前**: `<対象の関数名><条件>` を、キャメルケースで (例: `resolveFailsWithoutIdentityId`)。KDoc で、何を確認するかを書く。
 - **時刻と乱数**: 外の状態は、引数で渡して、固定する (`CognitoUnauthenticatedCredentials` の `now` のように)。実際の時計を使う動作は、別に 1 つだけ、テストする。
-- **実機と AWS での確認は、別に必要**: 実際の AWS への接続 (ID プール、テーブル、権限)、画面の表示、実機へのインストールは、単体テストでは、確認できない。
+- **実機と AWS での確認は、別に必要**: 実際の AWS への接続 (ID プール、テーブル、権限)、画面の表示、実機へのインストールは、単体テストでは、確認できない (今の文字列の表示は、実機で確認済み。画面を変えたら、また確認する)。
 
 ## 落とし穴 (検証で分かったこと。詳細は SETUP.md)
 
