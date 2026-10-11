@@ -24,6 +24,27 @@ Kotlin で作る Android アプリ。AWS の DynamoDB に保存された温度�
 ### 実機への転送 (ホストの adb)
 - `adb install -r app/build/outputs/apk/debug/app-debug.apk` (ホストに adb を入れる。`SETUP.md` の「実機へのインストール」と「アプリを動かして確認する」。実機で確認済み)
 
+### クラウドのセッション (claude.ai/code) で Docker を使うとき
+
+**通常の `docker compose build` と `docker compose run` は、使わない** (curl の終了コード 60 で失敗する。理由は、下)。代わりに、`scripts/cloud-docker.sh` を使う (`SETUP.md` の「クラウドのセッション」)。
+
+```bash
+scripts/cloud-docker.sh build          # 開発用のイメージ (thermon-dev) を作る (プロキシと CA の設定を足す)
+scripts/cloud-docker.sh run build      # docker compose run --rm build (test、coverage、format、analyze、docs も同じ)
+scripts/cloud-docker.sh start          # Docker のデーモンを起動する (起動済みなら、何もしない)
+```
+
+- クラウドの VM には、Docker (`dockerd`) が入っているが、デーモンは、自動では起動しない。SessionStart フック (`.claude/settings.json`) が、セッションの開始のときに、`scripts/cloud-docker.sh hook` で起動する (クラウドのときだけ)。起動していないときは、`scripts/cloud-docker.sh start`。ログは、`/tmp/dockerd.log`。
+- VM の外への通信は、全て、Anthropic のプロキシを通る。通信できるドメインは、環境の「Network access」で決まる (標準の Trusted の一覧にないドメインは、「Custom」で足す。`dl.google.com` と `maven-central.storage-download.googleapis.com` が要る)。
+- **curl の終了コード 60 の原因** (2026-10-11 に確認): VM の通信は、プロキシと、そのプロキシの CA 証明書を使うが、**コンテナは、どちらも引き継がない**。
+  - VM には、`HTTPS_PROXY=http://127.0.0.1:<ポート>` が設定されている。**ポートは、セッションの途中でも変わる** (例: 37451、45999) ので、固定で書かず、実行のたびに `$HTTPS_PROXY` から読む。`127.0.0.1` は、コンテナの中では、コンテナ自身を指す。
+  - CA 証明書は、`/root/.ccr/ca-bundle.crt` にある (`SSL_CERT_FILE` などが指す)。VM のシステムの信頼ストアには、入っていない。
+- **`cloud-docker.sh` がしていること**: `Dockerfile` を、一時的にコピーして (リポジトリは、変えない)、CA を、**証明書ごとに 1 ファイルに分けて**、信頼ストアに入れる行を足す (束を 1 ファイルのまま入れると、Java の信頼ストアには、最初の 1 枚しか入らず、Gradle が PKIX のエラーで落ちる)。`--network host` を付け、プロキシを、`ARG` で渡す (`ENV` には、焼き込まない)。実行 (`run`) のときは、`network_mode: host` と、プロキシの環境変数と、`JAVA_TOOL_OPTIONS` (Java のプロキシ) を足す。コンテナは、root で動く (`build/` などは、root 所有になる)。
+- イメージに入った CA は、セッションが変わって、プロキシの CA が変わったときは、古くなる。TLS のエラーが出たら、`scripts/cloud-docker.sh build` で、作り直す。
+- **Maven Central の `429 Too Many Requests`** (共有の出口の IP が、回数制限を受ける)。Google のミラー `maven-central.storage-download.googleapis.com` を、先に参照する。環境変数に `GRADLE_HOME_DIR=/var/cache/thermon-gradle` を設定し、セットアップスクリプトで、`/var/cache/thermon-gradle/init.d/maven-mirror.init.gradle.kts` を作る (`SETUP.md`)。**ファイルの中に、字下げの空白を入れない** (貼り付けで、全角スペースが混ざり、2 つの文が 1 行につながって、壊れたことがある)。
+- **確認した範囲**: クラウドで、手動の同じ手順で、`build` が成功した (APK 4.6 MB。ミラー 472 件、`repo.maven.apache.org` 0 件)。`cloud-docker.sh` は、手元 (ローカル) で、CA が、システムと Java の信頼ストアに入ること、`run` が、プロキシの環境変数を渡して、ホストのネットワークで動くこと、イメージにプロキシが焼き込まれないことを、確認した。**`cloud-docker.sh` を、クラウドで実行することは、まだ確認していない。** `format`、`analyze`、`test`、`coverage`、`docs` も、クラウドでは、未実行。1 回目の `build` が、ktlint プラグインの解決で失敗し、再実行で成功したことがある (原因は、特定していない)。
+- 同じ失敗を、繰り返さない。Docker を使わずに、VM の上で、直接ビルドする方法も、ある。
+
 ## プロジェクト構成
 
 - `core/`: 純粋な Kotlin (Android に依存しない)。AWS のクライアント (`CognitoUnauthenticatedCredentials`、`DynamoDbReadings`)、測定値 (`Reading`)、表示用の文字列 (`formatReading`、`formatTemperature`、`formatChartTime`、`formatChartValue`)、グラフ用のデータ (`ChartRange`、`buildChartSeries`)、画面に表示する内容 (`loadSnapshot`)。**単体テストで、行と分岐のカバレッジ 100%。**

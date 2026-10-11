@@ -368,6 +368,61 @@ Push 時に、`.github/workflows/build.yml` が、開発用の Docker イメー�
 - **GitHub Pages の設定** (最初の 1 回): リポジトリの Settings > Pages > Source を「GitHub Actions」にします。公開されるのは、`core` の API ドキュメント (Dokka) です。`SETUP.md` などの Markdown の文書は、含まれません。
 - **未検証**: GitHub Actions 上での実行 (ワークフローは、YAML の構文と、`GRADLE_HOME_DIR` でのローカルの実行だけを確認した)。最初の実行で、イメージのビルドと、Gradle の依存関係の取得に、時間がかかります。
 
+## クラウドのセッション (claude.ai/code)
+
+スマホやブラウザのクラウドのセッション (Claude Code on the web) で、ビルドするための設定です。クラウドの VM は、通信を、プロキシ経由にするので、コンテナ (Docker) の中の通信は、そのままでは、失敗します (curl の終了コード 60)。`scripts/cloud-docker.sh` が、これを避けます。
+
+> **状態**: クラウドで、手動の同じ手順で、`build` が成功しました。`scripts/cloud-docker.sh` は、手元で確認しましたが、**クラウドで実行することは、まだ確認していません**。
+
+### 環境の設定 (ブラウザ)
+
+<https://claude.ai/code> のメッセージ欄の上の、雲のアイコン (環境の名前) から、「Cloud」→ 環境の設定のアイコンで、ダイアログを開きます。
+
+| 欄 | 入れるもの |
+|:---|:---|
+| Network access | 「Custom」。「Allowed domains」に、`dl.google.com` と `maven-central.storage-download.googleapis.com` を、1 行ずつ (標準の許可リストも、残す) |
+| Environment variables | `GRADLE_HOME_DIR=/var/cache/thermon-gradle` と、`GIT_AUTHOR_NAME` などの 4 行 (コミットの名前) |
+| Setup script | 下 |
+
+```bash
+#!/bin/bash
+git config --system user.name "Tetsuya Higashi" || true
+git config --system user.email "996846+sluchin@users.noreply.github.com" || true
+
+mkdir -p /var/cache/thermon-gradle/init.d
+cat > /var/cache/thermon-gradle/init.d/maven-mirror.init.gradle.kts <<'EOF'
+beforeSettings {
+val mirror = "https://maven-central.storage-download.googleapis.com/maven2/"
+pluginManagement.repositories.maven { url = uri(mirror) }
+dependencyResolutionManagement.repositories.maven { url = uri(mirror) }
+}
+EOF
+chmod -R a+rwX /var/cache/thermon-gradle
+exit 0
+```
+
+- 初期化スクリプトの中は、**字下げをしません** (貼り付けで、全角スペースが混ざって、壊れたことがあります)。
+- Maven Central の `429` を避けるため、Google のミラーを先に参照します (ミラーにない成果物は、次のリポジトリが、引き受けます)。
+- 環境の変数とセットアップスクリプトの変更は、**新しいセッション**から効きます。
+
+### 使い方
+
+```bash
+scripts/cloud-docker.sh build      # 開発用のイメージ (thermon-dev) を作る. 最初の 1 回 (数分)
+scripts/cloud-docker.sh run build  # docker compose run --rm build (test, coverage, format, analyze, docs も同じ)
+```
+
+- Docker のデーモンは、SessionStart フック (`.claude/settings.json`) が、セッションの開始のときに、起動します (クラウドのときだけ)。起動していないときは、`scripts/cloud-docker.sh start` です (ログは、`/tmp/dockerd.log`)。
+- 通常の `docker compose build` と `docker compose run` は、クラウドでは、使いません。
+- プロキシのポートは、セッションの途中でも変わります。スクリプトが、実行のたびに、`$HTTPS_PROXY` から読みます。
+- イメージに入れたプロキシの CA が、古くなったとき (TLS のエラーが出たとき) は、`build` で作り直します。
+
+### 手元で確認したこと
+
+- CA の束を、証明書ごとに 1 ファイルに分けて入れると、システムと、Java の信頼ストア (`cacerts`) の両方に入る。
+- `build` は、`Dockerfile` に 4 行を足したコピーでビルドして、リポジトリの `Dockerfile` は、変えない。イメージに、プロキシの設定は、焼き込まれない。
+- `run` は、`network_mode: host` と、プロキシの環境変数 (`HTTPS_PROXY`、`JAVA_TOOL_OPTIONS` など) を、コンテナに渡す。
+
 ## 注意 (検証で分かったこと)
 
 - **`compileSdk` は 37 以上にする。** AWS SDK for Kotlin が使う OkHttp 5.5 が、`compileSdk` 37 以上を要求します (36 だと、`checkDebugAarMetadata` が失敗します)。`targetSdk` も、Android Lint の `OldTargetApi` のため、最新 (37) にします。
