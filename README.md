@@ -14,6 +14,12 @@ Android アプリ (thermon) ──> Cognito ID プール (未認証) ──一�
 
 > **状態**: 雛形と、AWS のクライアント (Cognito の未認証の認証情報と、DynamoDB の Query) を、実装しました。グラフの表示 (温度と湿度。範囲は 1 h、6 h、24 h) も、実装しています。単体テストは、AWS SDK のクライアントを偽物にして、行います ([SETUP.md](SETUP.md))。
 
+## 画面
+
+<a href="assets/thermon-chart.png"><img src="assets/thermon-chart.png" width="320" alt="thermon の画面 (室内と室外の温度と湿度のグラフ)"></a>
+
+室内 (オレンジ) と室外 (青) の、温度と湿度のグラフです (MAC アドレスは、画像の中で、隠してあります)。
+
 ## 機能
 
 - 機器 (MAC アドレス) ごとの、最新の温度・湿度と、受信した時刻を、1 行で表示する (電池残量は、`Reading` に入っているが、まだ表示しない)。
