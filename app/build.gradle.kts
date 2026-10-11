@@ -7,12 +7,12 @@ plugins {
 }
 
 // AWS の設定 (リージョン, ID プール ID, テーブル名, 機器) は, リポジトリに入れない.
-// local.properties (コミットしない) か, Gradle のプロパティ (-Pthermon.table=...) で渡す.
+// local.properties (コミットしない. UTF-8. 表示名に日本語を書ける) か, Gradle のプロパティ (-Pthermon.table=...) で渡す.
 val localProperties =
     Properties().apply {
         val file = rootProject.file("local.properties")
         if (file.exists()) {
-            file.inputStream().use { load(it) }
+            file.reader(Charsets.UTF_8).use { load(it) }
         }
     }
 
