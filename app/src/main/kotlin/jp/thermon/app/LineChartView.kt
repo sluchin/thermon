@@ -14,7 +14,9 @@ import android.graphics.Path
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.View
+import jp.thermon.core.ChartAxis
 import jp.thermon.core.ChartSeries
+import jp.thermon.core.commonAxis
 import jp.thermon.core.formatChartTime
 import jp.thermon.core.formatChartValue
 import java.time.ZoneId
@@ -61,6 +63,22 @@ private const val GRID_LINES = 3
 /** 補助線の中央の位置を求めるための値. */
 private const val HALF = 2f
 
+/** 凡例の名前と名前の間の隙間 (dp). */
+private const val LEGEND_GAP_DP = 12f
+
+/**
+ * グラフに描く 1 本の線 (機器ごと).
+ *
+ * @property name 凡例に表示する名前
+ * @property color 線の色
+ * @property series 線
+ */
+class ChartLine(
+    val name: String,
+    val color: Int,
+    val series: ChartSeries,
+)
+
 /** グラフの描く範囲 (View の中の, 左右上下の位置. px). */
 private class Plot(
     val left: Float = 0f,
@@ -70,9 +88,10 @@ private class Plot(
 )
 
 /**
- * 折れ線グラフ (1 本の線と, 縦軸の上限と下限, 横軸の開始と終了の時刻).
+ * 折れ線グラフ (複数の線を重ねる. 縦軸の上限と下限, 横軸の開始と終了の時刻, 凡例).
  *
- * [configure] でタイトルなどを決めて, [setChart] で線を渡す. 線が null のときは, 文字だけを表示する.
+ * [configure] でタイトルなどを決めて, [setChart] で線を渡す. 線がないときは, 文字だけを表示する.
+ * 縦軸は, 全ての線が入る範囲にそろえる.
  *
  * @param context コンテキスト
  * @param attrs 属性
@@ -119,41 +138,37 @@ class LineChartView
         private var title = ""
         private var unit = ""
         private var emptyText = ""
-        private var series: ChartSeries? = null
+        private var lines: List<ChartLine> = emptyList()
         private var zone: ZoneId = ZoneId.systemDefault()
 
         /**
-         * タイトルと単位と線の色を決める.
+         * タイトルと単位を決める.
          *
          * @param title グラフの上に表示するタイトル
          * @param unit 縦軸の値に付ける単位
-         * @param lineColor 線の色
          */
         fun configure(
             title: String,
             unit: String,
-            lineColor: Int,
         ) {
             this.title = title
             this.unit = unit
-            linePaint.color = lineColor
-            pointPaint.color = lineColor
             invalidate()
         }
 
         /**
          * 線を渡して, 描き直す.
          *
-         * @param series 線. null のときは, [emptyText] だけを表示する
+         * @param lines 線 (機器ごと). 空のときは, [emptyText] だけを表示する
          * @param zone 横軸の時刻を表示するタイムゾーン
          * @param emptyText 線がないときに表示する文字
          */
         fun setChart(
-            series: ChartSeries?,
+            lines: List<ChartLine>,
             zone: ZoneId,
             emptyText: String,
         ) {
-            this.series = series
+            this.lines = lines
             this.zone = zone
             this.emptyText = emptyText
             invalidate()
@@ -196,8 +211,8 @@ class LineChartView
                 val y = plot.top + (plot.bottom - plot.top) * i / (GRID_LINES - 1)
                 canvas.drawLine(plot.left, y, plot.right, y, gridPaint)
             }
-            val current = series
-            if (current == null) {
+            val axis = commonAxis(lines.map { it.series })
+            if (axis == null) {
                 textPaint.textAlign = Paint.Align.CENTER
                 canvas.drawText(
                     emptyText,
@@ -207,19 +222,20 @@ class LineChartView
                 )
                 return
             }
-            drawLabels(canvas, current)
-            drawLines(canvas, current)
+            drawLegend(canvas)
+            drawLabels(canvas, axis)
+            lines.forEach { drawLine(canvas, it, axis) }
         }
 
         /**
          * 縦軸の上限と下限, 横軸の開始と終了の時刻を描く.
          *
          * @param canvas 描く先
-         * @param current 線
+         * @param current 共通の軸
          */
         private fun drawLabels(
             canvas: Canvas,
-            current: ChartSeries,
+            current: ChartAxis,
         ) {
             val gap = TEXT_GAP_DP * density
             val textHeight = textPaint.textSize
@@ -253,26 +269,47 @@ class LineChartView
         }
 
         /**
+         * 凡例 (線の名前を, 線の色で) を, タイトルと同じ高さの右端から並べる.
+         *
+         * @param canvas 描く先
+         */
+        private fun drawLegend(canvas: Canvas) {
+            val gap = LEGEND_GAP_DP * density
+            var right = width - PADDING_RIGHT_DP * density
+            textPaint.textAlign = Paint.Align.RIGHT
+            for (line in lines.asReversed()) {
+                textPaint.color = line.color
+                canvas.drawText(line.name, right, TITLE_BASELINE_DP * density, textPaint)
+                right -= textPaint.measureText(line.name) + gap
+            }
+            textPaint.color = textColor
+        }
+
+        /**
          * 線の部分ごとに, 折れ線 (点が 1 つだけなら, 円) を描く.
          *
          * @param canvas 描く先
-         * @param current 線
+         * @param line 線
+         * @param axis 共通の軸
          */
-        private fun drawLines(
+        private fun drawLine(
             canvas: Canvas,
-            current: ChartSeries,
+            line: ChartLine,
+            axis: ChartAxis,
         ) {
-            val timeSpan = (current.window.toTs - current.window.fromTs).toFloat()
-            val valueSpan = (current.maxValue - current.minValue).toFloat()
-            for (segment in current.segments) {
+            val timeSpan = (axis.window.toTs - axis.window.fromTs).toFloat()
+            val valueSpan = (axis.maxValue - axis.minValue).toFloat()
+            linePaint.color = line.color
+            pointPaint.color = line.color
+            for (segment in line.series.segments) {
                 path.reset()
                 for ((i, point) in segment.withIndex()) {
                     val x =
                         plot.left +
-                            (point.ts - current.window.fromTs) / timeSpan * (plot.right - plot.left)
+                            (point.ts - axis.window.fromTs) / timeSpan * (plot.right - plot.left)
                     val y =
                         plot.bottom -
-                            (point.value - current.minValue).toFloat() / valueSpan *
+                            (point.value - axis.minValue).toFloat() / valueSpan *
                             (plot.bottom - plot.top)
                     if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
                     if (segment.size == 1) {

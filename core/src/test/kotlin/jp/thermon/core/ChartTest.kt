@@ -149,4 +149,20 @@ class ChartTest {
         assertEquals(18.0, series.minValue, DELTA)
         assertEquals(22.0, series.maxValue, DELTA)
     }
+
+    /** 共通の軸は, 縦軸が, 全ての線が入る範囲で, 横軸が, 先頭の線の窓になる. */
+    @Test
+    fun commonAxisCoversAllSeries() {
+        val a = ChartSeries(emptyList(), WINDOW, 18.0, 24.0)
+        val b = ChartSeries(emptyList(), WINDOW, 10.0, 20.0)
+
+        assertEquals(ChartAxis(WINDOW, 10.0, 24.0), commonAxis(listOf(a, b)))
+        assertEquals(ChartAxis(WINDOW, 18.0, 24.0), commonAxis(listOf(a)))
+    }
+
+    /** 線がないときは, 共通の軸も, ない. */
+    @Test
+    fun commonAxisEmpty() {
+        assertNull(commonAxis(emptyList()))
+    }
 }

@@ -17,8 +17,10 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import jp.thermon.core.ChartRange
+import jp.thermon.core.NodeSnapshot
 import jp.thermon.core.ReadingsRepository
 import jp.thermon.core.loadSnapshot
+import jp.thermon.core.parseNodes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -35,15 +37,17 @@ private const val CONTENT_PADDING_DP = 16
 private const val MILLIS_PER_SECOND = 1000L
 
 /**
- * 機器ごとに, 最新の測定値と, 温度と湿度のグラフを表示する画面.
+ * 温度と湿度の 2 つのグラフに, 機器 (室内, 室外など) を選んで重ねて表示する画面.
  *
- * 機器は, local.properties の thermon.nodes (コンマ区切りの MAC アドレス) で指定する.
- * グラフの範囲 (1 時間, 6 時間, 24 時間) は, 上のボタンで選ぶ.
+ * 機器は, local.properties の thermon.nodes (コンマ区切りの MAC アドレス. 「MAC アドレス=室外」のように
+ * 表示名を付けられる) で指定する.
+ * グラフの範囲 (1 時間, 6 時間, 24 時間) は, 上のボタンで選ぶ. 機器は, グラフの上のボタンで選ぶ.
  */
 class MainActivity : Activity() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var root: ScrollView
-    private var sections: List<NodeSection> = emptyList()
+    private var panel: ChartsPanel? = null
+    private var nodes: List<String> = emptyList()
     private var buttons: Map<ChartRange, Button> = emptyMap()
     private var repository: ReadingsRepository? = null
     private var range = ChartRange.HOUR_6
@@ -65,22 +69,14 @@ class MainActivity : Activity() {
         applySystemBarInsets()
         setContentView(root)
 
-        val nodes =
-            BuildConfig.NODES
-                .split(",")
-                .map { it.trim() }
-                .filter { it.isNotEmpty() }
-        if (BuildConfig.IDENTITY_POOL_ID.isEmpty() || nodes.isEmpty()) {
+        val specs = parseNodes(BuildConfig.NODES)
+        if (BuildConfig.IDENTITY_POOL_ID.isEmpty() || specs.isEmpty()) {
             content.addView(TextView(this).apply { text = getString(R.string.not_configured) })
             return
         }
         content.addView(createRangeBar())
-        sections =
-            nodes.map {
-                NodeSection(this, it).also { section ->
-                    content.addView(section.container)
-                }
-            }
+        nodes = specs.map { it.node }
+        panel = ChartsPanel(this, specs).also { content.addView(it.container) }
         repository = AwsClients.readings()
         reload()
     }
@@ -133,20 +129,24 @@ class MainActivity : Activity() {
      * 機器ごとに, 測定値を取り出して, 表示する (取り出し中の処理があれば, 止める).
      *
      * 取り出しに失敗した機器は, エラーのメッセージを表示する (ほかの機器は, 続ける).
+     * 機器が 1 台取り出せるたびに, 表示を更新する.
      */
     private fun reload() {
         val source = repository ?: return
+        val view = panel ?: return
         val selected = range
         loadJob?.cancel()
-        sections.forEach { it.showLoading() }
+        view.showLoading()
         loadJob =
             scope.launch {
                 val nowTs = System.currentTimeMillis() / MILLIS_PER_SECOND
-                for (section in sections) {
-                    val result = runCatching { loadSnapshot(source, section.node, selected, nowTs) }
+                val loaded = mutableMapOf<String, Result<NodeSnapshot>>()
+                for (node in nodes) {
+                    loaded[node] = runCatching { loadSnapshot(source, node, selected, nowTs) }
                     // 範囲を選び直して, 止められたときは, 古い結果を表示しない
                     ensureActive()
-                    runOnUiThread { section.show(result, ZoneId.systemDefault()) }
+                    val shown = loaded.toMap()
+                    runOnUiThread { view.show(shown, ZoneId.systemDefault()) }
                 }
             }
     }

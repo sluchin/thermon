@@ -100,8 +100,8 @@ core/                            純粋な Kotlin (AWS のクライアントと,
   Chart                          グラフ用のデータ (範囲, 平均, 線の切れ目, 縦軸の範囲)
   NodeSnapshot                   1 台の機器の, 最新の値と, 温度と湿度のグラフ (loadSnapshot)
 app/                             Android (画面だけの薄い層. 設定の読み込みと, 描画)
-  MainActivity                   画面 (範囲のボタンと, 機器ごとの表示)
-  NodeSection, LineChartView     機器ごとの表示と, 折れ線グラフ (Canvas. ライブラリなし)
+  MainActivity                   画面 (範囲のボタンと, ChartsPanel)
+  ChartsPanel, LineChartView     機器のボタンと 2 つのグラフ, 折れ線グラフ (Canvas. ライブラリなし. 複数の線を重ねる)
 ```
 
 ## コマンド
@@ -191,10 +191,11 @@ AWS 側の準備 (テーブル `thermo-readings`、IoT のルール、ID プー�
 thermon.region=ap-northeast-1
 thermon.identityPoolId=ap-northeast-1:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 thermon.table=thermo-readings
-# 機器の MAC アドレス (コンマ区切り)
-thermon.nodes=AA:BB:CC:DD:EE:01,AA:BB:CC:DD:EE:02
+# 機器の MAC アドレス (コンマ区切り). =のあとに表示名を付けられる (UTF-8)
+thermon.nodes=AA:BB:CC:DD:EE:01=室外,AA:BB:CC:DD:EE:02=室内
 ```
 
+- `thermon.nodes` の表示名 (`=室外` など) は、省けます。付けると、画面に「室外 (AA:BB:CC:DD:EE:01)」の形で出ます。`local.properties` は UTF-8 で読むので、日本語を書けます。
 - `thermon.region` の既定は `ap-northeast-1`、`thermon.table` の既定は `thermo-readings` です。`thermon.identityPoolId` と `thermon.nodes` は、既定が空で、空のままだと、アプリは、「AWS is not configured」と表示します。
 - 設定を変えたら、`docker compose run --rm build` で、ビルドし直します。
 
@@ -209,7 +210,7 @@ thermon.nodes=AA:BB:CC:DD:EE:01,AA:BB:CC:DD:EE:02
 - **単体テスト**: Cognito と DynamoDB のクライアントを、MockK で偽物にして、認証情報の取得とキャッシュ、期限での取り直し、同時の呼び出し、応答に項目がないときの例外、`Query` の要求 (キー条件、`lastEvaluatedKey`、新しい順の 1 件)、読めない項目の除外を、確認しています (`core` の行と分岐のカバレッジ 100%)。
 - **ビルド**: 設定が、`BuildConfig` に入ります。設定がないときは、空になります。
 - **実機での動作**: AWS の準備 ([AWS_DYNAMODB.md](AWS_DYNAMODB.md)) をして、`local.properties` に書き、実機の Android 端末に入れて、起動します。実際の AWS (Cognito の ID プール、DynamoDB のテーブル、未認証ロール) に接続して、機器ごとの最新の測定値(温度、湿度、受信した時刻)が、**文字列で**表示されます。手順は、次の「アプリを動かして確認する」です。
-- **グラフの表示**: 機器ごとに、最新の測定値の 1 行と、温度 (橙) と湿度 (青) の折れ線グラフを表示します。範囲のボタン (1 h、6 h、24 h) で、横軸と線が変わります。縦軸の値、横軸の開始と終了の時刻 (端末のタイムゾーン) も、表示します。測定値のない範囲は、「No data in this range」と表示します。
+- **グラフの表示**: 温度と湿度の 2 つのグラフに、機器ごとの線を重ねて表示します。グラフの上の機器のボタン (`室内`、`室外` など。表示名は `thermon.nodes` で付けます) を押すと、その機器の線を出したり消したりします (最初は全て表示)。線の色は、設定の順に、橙、青、緑、紫で、グラフの右上の凡例と、ボタンの文字の色が、同じです。縦軸は、表示している線が全て入る範囲にそろいます。機器ごとの最新の測定値の 1 行は、ボタンの下に出ます。範囲のボタン (1 h、6 h、24 h) で、横軸と線が変わります。縦軸の値、横軸の開始と終了の時刻 (端末のタイムゾーン) も、表示します。測定値のない範囲は、「No data in this range」と表示します。
 
 ## エミュレータ (Docker)
 
@@ -321,7 +322,7 @@ AWS の準備 ([AWS_DYNAMODB.md](AWS_DYNAMODB.md)) が終わったあとの手�
    thermon.nodes=<機器の MAC アドレス (コンマ区切り)>
    ```
 
-   `thermon.nodes` は、DynamoDB の `node` と、**同じ MAC アドレス** (大文字・小文字も、コロンも同じ) にします。
+   `thermon.nodes` は、DynamoDB の `node` と、**同じ MAC アドレス** (大文字・小文字も、コロンも同じ) にします。`<MAC アドレス>=室外` のように、表示名を付けられます (例: `thermon.nodes=ED:2E:C4:46:3B:11=室外,00:AA:01:00:00:42=室内`)。
 
 3. **ビルドする** (値を変えたら、ビルドし直す)
 
@@ -343,7 +344,7 @@ AWS の準備 ([AWS_DYNAMODB.md](AWS_DYNAMODB.md)) が終わったあとの手�
    - インストールの確認は、`adb shell pm list packages | grep thermon` (`package:jp.thermon.app` と出れば成功)。
 
 6. **表示を確認する**
-   - 正常なら、画面の上に、範囲を選ぶボタン (1 h、6 h、24 h。選んでいるボタンは、薄く表示される。既定は 6 h) が出ます。その下に、機器ごとに、最新の温度、湿度、受信した時刻の 1 行と、温度と湿度のグラフが出ます。ボタンを押すと、その範囲で取り出し直します (取り出している間は、「Loading…」)。
+   - 正常なら、画面の上に、範囲を選ぶボタン (1 h、6 h、24 h。選んでいるボタンは、薄く表示される。既定は 6 h) が出ます。その下に、機器を選ぶボタンと、機器ごとの最新の温度、湿度、受信した時刻の 1 行と、温度と湿度のグラフが出ます。ボタンを押すと、その範囲で取り出し直します (取り出している間は、「Loading…」)。
    - 「AWS is not configured」と出るなら、`thermon.identityPoolId` か `thermon.nodes` が空です。直して、ビルドし直します。
 
 うまくいかないとき:

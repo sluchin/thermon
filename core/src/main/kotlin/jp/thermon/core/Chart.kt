@@ -109,6 +109,36 @@ data class ChartSeries(
     val maxValue: Double,
 )
 
+/**
+ * 複数の線を, 同じグラフに重ねるときの, 共通の軸 (横軸の窓と, 縦軸の範囲).
+ *
+ * @property window 横軸の窓
+ * @property minValue 縦軸の下限
+ * @property maxValue 縦軸の上限
+ */
+data class ChartAxis(
+    val window: ChartWindow,
+    val minValue: Double,
+    val maxValue: Double,
+)
+
+/**
+ * 複数の線に共通の軸を求める (縦軸は, 全ての線が入る範囲. 横軸は, 先頭の線の窓).
+ *
+ * 線は, 同じ窓 (同じ範囲, 同じ現在の時刻) で作ったものとする.
+ *
+ * @param series 線 (1 本以上)
+ * @return 共通の軸. 線がないときは, null
+ */
+fun commonAxis(series: List<ChartSeries>): ChartAxis? {
+    val first = series.firstOrNull() ?: return null
+    return ChartAxis(
+        first.window,
+        series.map { it.minValue }.min(),
+        series.map { it.maxValue }.max(),
+    )
+}
+
 /** 区切りの中の, 値の合計と個数 (平均を求める途中の値). */
 private class Bucket {
     /** 値の合計. */
