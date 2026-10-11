@@ -5,5 +5,8 @@
 beforeSettings {
 val mirror = "https://maven-central.storage-download.googleapis.com/maven2/"
 pluginManagement.repositories.maven { url = uri(mirror) }
+pluginManagement.repositories.google()
+// Plugin Portal にしかないプラグイン (ktlint など) は, Maven Central が 429 を返すと, 最後の Portal まで進めない.
+pluginManagement.repositories.maven { url = uri("https://plugins.gradle.org/m2/") }
 dependencyResolutionManagement.repositories.maven { url = uri(mirror) }
 }
