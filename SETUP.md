@@ -381,7 +381,7 @@ Push 時に、`.github/workflows/build.yml` が、開発用の Docker イメー�
 | 欄 | 入れるもの |
 |:---|:---|
 | Network access | 「Custom」。「Allowed domains」に、`dl.google.com` と `maven-central.storage-download.googleapis.com` を、1 行ずつ (標準の許可リストも、残す) |
-| Environment variables | `GRADLE_HOME_DIR=/var/cache/thermon-gradle` と、`GIT_AUTHOR_NAME` などの 4 行 (コミットの名前) |
+| Environment variables | `GIT_AUTHOR_NAME` などの 4 行 (コミットの名前)。`GRADLE_HOME_DIR` は、要りません (クラウドでは、`scripts/cloud-docker.sh` が、`/var/cache/thermon-gradle` を使います) |
 | Setup script | 下 |
 
 ```bash
@@ -389,20 +389,11 @@ Push 時に、`.github/workflows/build.yml` が、開発用の Docker イメー�
 git config --system user.name "Tetsuya Higashi" || true
 git config --system user.email "996846+sluchin@users.noreply.github.com" || true
 
-mkdir -p /var/cache/thermon-gradle/init.d
-cat > /var/cache/thermon-gradle/init.d/maven-mirror.init.gradle.kts <<'EOF'
-beforeSettings {
-val mirror = "https://maven-central.storage-download.googleapis.com/maven2/"
-pluginManagement.repositories.maven { url = uri(mirror) }
-dependencyResolutionManagement.repositories.maven { url = uri(mirror) }
-}
-EOF
-chmod -R a+rwX /var/cache/thermon-gradle
 exit 0
 ```
 
-- 初期化スクリプトの中は、**字下げをしません** (貼り付けで、全角スペースが混ざって、壊れたことがあります)。
-- Maven Central の `429` を避けるため、Google のミラーを先に参照します (ミラーにない成果物は、次のリポジトリが、引き受けます)。
+- **Maven Central の `429` を避ける設定は、スクリプトに、入れません。** `scripts/cloud-docker.sh run` が、クラウドのときに、毎回、`scripts/maven-mirror.init.gradle.kts` を、Gradle のホーム (`/var/cache/thermon-gradle`。`GRADLE_HOME_DIR` で変えられる) の `init.d/` に置きます。Google のミラーを先に参照します (ミラーにない成果物は、次のリポジトリが、引き受けます)。貼り付けで壊れることも、新しいセッションを待つことも、ありません。
+- `run` は、ミラーに届くかを確かめて、届かないときは、`WARNING` を出します (「Allowed domains」の設定が、足りないとき)。
 - 環境の変数とセットアップスクリプトの変更は、**新しいセッション**から効きます。
 
 ### 使い方
@@ -415,6 +406,7 @@ scripts/cloud-docker.sh run build  # docker compose run --rm build (test, covera
 - Docker のデーモンは、SessionStart フック (`.claude/settings.json`) が、セッションの開始のときに、起動します (クラウドのときだけ)。起動していないときは、`scripts/cloud-docker.sh start` です (ログは、`/tmp/dockerd.log`)。
 - 通常の `docker compose build` と `docker compose run` は、クラウドでは、使いません。
 - プロキシのポートは、セッションの途中でも変わります。スクリプトが、実行のたびに、`$HTTPS_PROXY` から読みます。
+- プロキシは、HTTPS (`curl`、Java) だけに渡します。`HTTP_PROXY` は、渡しません (`apt` が、プロキシに拒否されたため)。それでも `apt` が失敗するときは、環境の「Allowed domains」に、`archive.ubuntu.com` と `security.ubuntu.com` を足します。
 - イメージに入れたプロキシの CA が、古くなったとき (TLS のエラーが出たとき) は、`build` で作り直します。
 
 ### 手元で確認したこと
