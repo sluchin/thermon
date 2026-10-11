@@ -12,6 +12,12 @@
 # docker compose build は, curl の終了コード 60 (証明書の検証の失敗) で失敗する.
 # プロキシのポートは, セッションの途中でも変わるので, 実行のたびに, $HTTPS_PROXY から読む.
 #
+# プロキシは, HTTPS (curl, Java) だけに渡す. HTTP_PROXY は渡さない: apt (Ubuntu のミラーは HTTP) が,
+# プロキシ経由になって, 拒否されたため (プロキシを通さずに, 直接つながる).
+#
+# run は, クラウドのとき, Maven Central のミラーの初期化スクリプト (scripts/maven-mirror.init.gradle.kts) を,
+# Gradle のホームに置く (Maven Central の 429 を避ける. GRADLE_HOME_DIR がなければ, /var/cache/thermon-gradle).
+#
 # リポジトリの Dockerfile は, 変えない (一時的なコピーに, CA を取り込む行を足して, ビルドする).
 # ローカルや CI では, 使わない (プロキシの設定が, ないとき: ビルドは, 通常どおり).
 #
@@ -52,6 +58,31 @@ java_proxy_options() {
     echo "-Dhttp.proxyHost=$PROXY_HOST -Dhttp.proxyPort=$PROXY_PORT" \
         "-Dhttps.proxyHost=$PROXY_HOST -Dhttps.proxyPort=$PROXY_PORT" \
         "-Dhttp.nonProxyHosts=localhost|127.0.0.1"
+}
+
+MIRROR_URL="https://maven-central.storage-download.googleapis.com/maven2"
+MIRROR_PROBE="$MIRROR_URL/org/jetbrains/kotlin/kotlin-stdlib/2.4.21/kotlin-stdlib-2.4.21.pom"
+
+# クラウドのとき, Gradle のホーム (キャッシュ) に, Maven Central のミラーの初期化スクリプトを置く.
+# GRADLE_HOME_DIR があれば, そこ. なければ, クラウドのときだけ, /var/cache/thermon-gradle を使う.
+# ローカルや CI (GRADLE_HOME_DIR なし, クラウドでもない) では, 何もしない
+prepare_gradle_home() {
+    local root="$1" dir="${GRADLE_HOME_DIR:-}" code
+    if [ -z "$dir" ] && [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
+        dir=/var/cache/thermon-gradle
+    fi
+    [ -n "$dir" ] || return 0
+    mkdir -p "$dir/init.d"
+    cp "$root/scripts/maven-mirror.init.gradle.kts" "$dir/init.d/maven-mirror.init.gradle.kts"
+    chmod -R a+rwX "$dir"
+    export GRADLE_HOME_DIR="$dir"
+    echo "Gradle home: $dir (Maven mirror: on)"
+    # ミラーに届くかを確かめる (届かないと, Maven Central に回って, 429 になる)
+    code="$(curl -s -o /dev/null -m 15 -w '%{http_code}' "$MIRROR_PROBE" 2> /dev/null || true)"
+    if [ "$code" != "200" ]; then
+        echo "WARNING: the Maven mirror is not reachable (HTTP ${code:-000})." >&2
+        echo "  Add maven-central.storage-download.googleapis.com to the Allowed domains of the environment." >&2
+    fi
 }
 
 docker_ready() {
@@ -146,9 +177,7 @@ cmd_build() {
     local args=(--network host --target dev -t "$IMAGE" -f "$work/Dockerfile")
     if [ -n "$PROXY_HOST" ]; then
         args+=(
-            --build-arg "HTTP_PROXY=${HTTPS_PROXY:-$https_proxy}"
             --build-arg "HTTPS_PROXY=${HTTPS_PROXY:-$https_proxy}"
-            --build-arg "http_proxy=${HTTPS_PROXY:-$https_proxy}"
             --build-arg "https_proxy=${HTTPS_PROXY:-$https_proxy}"
             --build-arg "NO_PROXY=localhost,127.0.0.1"
             --build-arg "JAVA_TOOL_OPTIONS=$java_opts"
@@ -171,6 +200,7 @@ cmd_run() {
     cmd_start || return 1
     parse_proxy
     java_opts="$(java_proxy_options)"
+    prepare_gradle_home "$root"
 
     work="$(mktemp -d)"
     WORK="$work"
@@ -182,9 +212,7 @@ cmd_run() {
             if [ -n "$PROXY_HOST" ]; then
                 echo "    environment:"
                 echo "      - HTTPS_PROXY=${HTTPS_PROXY:-$https_proxy}"
-                echo "      - HTTP_PROXY=${HTTPS_PROXY:-$https_proxy}"
                 echo "      - https_proxy=${HTTPS_PROXY:-$https_proxy}"
-                echo "      - http_proxy=${HTTPS_PROXY:-$https_proxy}"
                 echo "      - NO_PROXY=localhost,127.0.0.1"
                 echo "      - JAVA_TOOL_OPTIONS=$java_opts"
             fi
