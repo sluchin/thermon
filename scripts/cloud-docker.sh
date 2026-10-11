@@ -118,6 +118,9 @@ cmd_hook() {
         return 0
     fi
     cmd_start || true
+    # SessionStart フックの出力は, Claude の文脈に入る. 通常の docker compose を使わせないための注意
+    echo "Cloud session: run the Docker services (build, test, coverage, format, format-fix, analyze, docs)"
+    echo "with scripts/cloud-docker.sh run <service>, not with docker compose run. See .claude/CLAUDE.md."
     return 0
 }
 
