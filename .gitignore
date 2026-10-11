@@ -42,3 +42,10 @@ local.properties
 # 署名の鍵 (リリース用の鍵を, コミットしない)
 *.jks
 *.keystore
+
+# AWS の手順 (AWS_DYNAMODB.md) のコマンドが作る JSON. 実際のアカウント ID と ID プール ID が入るので, コミットしない
+/iot-trust.json
+/iot-put.json
+/rule-dynamodb.json
+/unauth-trust.json
+/unauth-read.json

@@ -97,7 +97,7 @@ aws sts get-caller-identity
 
 `UserId`、`Account`、`Arn` が表示されれば、設定できています。
 
-- **`Account`** (12桁) が、[AWS_DYNAMODB.md](AWS_DYNAMODB.md) の `<ACCOUNT_ID>` です。
+- **`Account`** (12桁) が、アカウント ID です。[AWS_DYNAMODB.md](AWS_DYNAMODB.md) の手順は、この値を、コマンドで取り出して、変数 `ACCOUNT_ID` に入れます (書き写す必要は、ありません)。
 - 別のプロファイルで保存したときは、`--profile <名前>` を付けます。
 
 あとは、[AWS_DYNAMODB.md](AWS_DYNAMODB.md) の手順を、2章 (テーブル) から順に実行します。3章 (IAM ロール) のコマンドは、カレントディレクトリに `iot-trust.json` と `iot-put.json` を作ります。リポジトリの外 (`~/tmp` など) で実行すると、ファイルが残りません。
@@ -113,6 +113,6 @@ aws sts get-caller-identity
 CloudShell は、コンソールの右上のアイコンから開く、ブラウザ内のターミナルです。サインインしたユーザーの権限で、AWS CLI がすぐに使えます。
 
 - アクセスキーも、AWS CLI のインストールも、要りません。
-- [AWS_DYNAMODB.md](AWS_DYNAMODB.md) のコマンドを、そのまま貼って実行できます (`<ACCOUNT_ID>` などは、置き換えます)。
+- [AWS_DYNAMODB.md](AWS_DYNAMODB.md) のコマンドを、そのまま貼って実行できます (アカウント ID は、変数に、自動で入ります)。
 - サインインしているユーザーに、手順で使うサービスの権限が必要です。
 - 1回きりの作業なら、この方法をお勧めします。ルートユーザーでの作業は、お勧めしません。
