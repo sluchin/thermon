@@ -21,6 +21,9 @@
 # リポジトリの Dockerfile は, 変えない (一時的なコピーに, CA を取り込む行を足して, ビルドする).
 # ローカルや CI では, 使わない (プロキシの設定が, ないとき: ビルドは, 通常どおり).
 #
+# build は, ベースのイメージ (ubuntu:24.04) を, Docker Hub から取る. 429 (回数制限) で失敗したときは,
+# Google のミラー (mirror.gcr.io) から取って, 元のタグを付ける.
+#
 # 環境変数 (省略可): THERMON_IMAGE (イメージの名前. 既定は thermon-dev:latest),
 # CLOUD_CA_BUNDLE (プロキシの CA の束. 既定は SSL_CERT_FILE, なければ /root/.ccr/ca-bundle.crt),
 # CLOUD_DOCKER_DRYRUN (空でなければ, build は, 実行するコマンドと Dockerfile の差分を, 表示するだけ)
@@ -83,6 +86,24 @@ prepare_gradle_home() {
         echo "WARNING: the Maven mirror is not reachable (HTTP ${code:-000})." >&2
         echo "  Add maven-central.storage-download.googleapis.com to the Allowed domains of the environment." >&2
     fi
+}
+
+# Dockerfile のベースのイメージ (最初の FROM) が, なければ, 取得する. Docker Hub が 429 (回数制限) を
+# 返すときは, Google のミラー (mirror.gcr.io) から取って, 元の名前のタグを付ける
+ensure_base_image() {
+    local root="$1" base mirror
+    base="$(awk '/^FROM /{print $2; exit}' "$root/Dockerfile")"
+    [ -n "$base" ] || return 0
+    docker image inspect "$base" > /dev/null 2>&1 && return 0
+    echo "Pulling $base"
+    docker pull "$base" && return 0
+    # 公式のイメージ (名前に / がない) は, library/ の下にある
+    case "$base" in
+        */*) mirror="mirror.gcr.io/$base" ;;
+        *) mirror="mirror.gcr.io/library/$base" ;;
+    esac
+    echo "Pulling $base failed. Trying the mirror: $mirror"
+    docker pull "$mirror" && docker tag "$mirror" "$base"
 }
 
 docker_ready() {
@@ -162,6 +183,9 @@ cmd_build() {
         return 1
     fi
     cmd_start || return 1
+    if [ -z "${CLOUD_DOCKER_DRYRUN:-}" ]; then
+        ensure_base_image "$root" || return 1
+    fi
     parse_proxy
     java_opts="$(java_proxy_options)"
 
