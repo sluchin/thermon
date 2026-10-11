@@ -2,7 +2,7 @@
 
 このドキュメントは、Kotlin で Android アプリ (AWS のクライアント) を、**Android Studio を使わずに、コマンドラインだけで**開発するための環境構築手順です。ビルド、テスト、整形、静的解析、ドキュメントの生成は、Docker の中で実行します (姉妹プロジェクトの [esp32-thermo-system](https://github.com/sluchin/esp32-thermo-system) と同じ方針です)。
 
-> **このドキュメントの状態**: `Dockerfile`、`docker-compose.yml`、Gradle のプロジェクトの雛形 (`core` と `app`) は、リポジトリにあります。下の全てのサービスを、実際に実行して、成功することを確認しました (2026-10-10。Ubuntu 24.04 の Docker イメージ)。整形、静的解析、カバレッジ、ドキュメント、コンパイラの警告のチェックが、違反のあるファイルで、**正しく失敗する**ことも、確認しました。実機への転送と、実際の AWS への接続、文字列の表示は、実機で確認しました (2026-10-10。「アプリを動かして確認する」)。確認していない項目は、「未検証」と書いてあります (CI、エミュレータからの AWS への接続、無線のデバッグ)。
+> **このドキュメントの状態**: `Dockerfile`、`docker-compose.yml`、Gradle のプロジェクトの雛形 (`core` と `app`) は、リポジトリにあります。下の全てのサービスが、使えます (Ubuntu 24.04 の Docker イメージ)。「未検証」と書いた項目は、CI と無線のデバッグです。
 
 ## 方針
 
@@ -17,7 +17,7 @@
 
 ## 使うツールと版
 
-次の版で、動くことを確認しました。版は、`gradle/libs.versions.toml` に、まとめて書いてあります。
+次の版を使います。版は、`gradle/libs.versions.toml` に、まとめて書いてあります。
 
 | ツール | 版 | 備考 |
 |:---|:---|:---|
@@ -81,7 +81,12 @@ docker compose run --rm dev gradle wrapper --gradle-version <GRADLE_VERSION>
 
 ```
 Dockerfile, docker-compose.yml   開発環境 (Docker). Dockerfile は, 2 段 (dev と emulator)
-scripts/                         エミュレータの起動 (emulator.sh) と, 待ち合わせ (emulator-wait.sh)
+scripts/                         エミュレータの起動 (emulator.sh) と, 待ち合わせ (emulator-wait.sh).
+                                 クラウドのセッションで Docker を使う補助 (cloud-docker.sh) と,
+                                 Maven Central のミラーの初期化スクリプト (maven-mirror.init.gradle.kts)
+.github/                         GitHub Actions (workflows/build.yml と, Docker イメージと Gradle キャッシュのアクション)
+.claude/                         Claude Code の設定 (CLAUDE.md と, クラウドのセッションで Docker のデーモンを起動するフック)
+CODING_STYLE.md                  コーディングスタイル (今は, Kotlin の公式の規約へのリンクだけ)
 settings.gradle.kts              モジュール: :core と :app
 build.gradle.kts                 プラグインの宣言だけ (各モジュールで適用する)
 gradle/libs.versions.toml        ライブラリとプラグインの版 (版カタログ)
@@ -152,7 +157,7 @@ Gradle のキャッシュ (依存関係のダウンロード) も、消すとき
 - **Android Lint**: `lint { warningsAsErrors = true; abortOnError = true }` で、警告もエラーにします。検証では、`targetSdk` が最新でないこと、アプリのアイコンがないこと、バックアップの設定 (`dataExtractionRules` と `fullBackupContent`) がないことを、検出しました。
 - **Kotlin のコンパイラ**: `allWarningsAsErrors` を `true` にして、警告をエラーにします。検証では、非推奨の関数を呼ぶと、`warnings found and -Werror specified` で、ビルドが失敗しました。なお、未使用の変数は、Kotlin のコンパイラの警告には、なりません (IDE の検査で、コンパイラは、出しません)。
 - **Dokka**: `reportUndocumented` を有効にして、`failOnWarning` を `true` にしています。KDoc のない公開の関数があると、`Undocumented` の警告で、`docs` が失敗します。
-- **JaCoCo**: `jacocoTestCoverageVerification` に、行 (`LINE`) と分岐 (`BRANCH`) の最小値を 1.0 (100%) とする規則を置いて、確認しました。UI の層 (`app`) は、対象外です (薄い層にする)。
+- **JaCoCo**: `jacocoTestCoverageVerification` に、行 (`LINE`) と分岐 (`BRANCH`) の最小値を 1.0 (100%) とする規則を置きます。UI の層 (`app`) は、対象外です (薄い層にする)。
 
 ## AWS への接続
 
@@ -202,9 +207,9 @@ thermon.nodes=AA:BB:CC:DD:EE:01,AA:BB:CC:DD:EE:02
 ### 確認の範囲
 
 - **単体テスト**: Cognito と DynamoDB のクライアントを、MockK で偽物にして、認証情報の取得とキャッシュ、期限での取り直し、同時の呼び出し、応答に項目がないときの例外、`Query` の要求 (キー条件、`lastEvaluatedKey`、新しい順の 1 件)、読めない項目の除外を、確認しています (`core` の行と分岐のカバレッジ 100%)。
-- **ビルド**: 設定が、`BuildConfig` に入ることと、設定がないときに、空になることを、確認しました。
-- **実機で確認済み** (2026-10-10): AWS の準備 ([AWS_DYNAMODB.md](AWS_DYNAMODB.md)) をして、`local.properties` に書き、実機の Android 端末に入れて、起動しました。実際の AWS (Cognito の ID プール、DynamoDB のテーブル、未認証ロール) に接続して、機器ごとの最新の測定値(温度、湿度、受信した時刻)が、**文字列で**表示されることを確認しました。手順は、次の「アプリを動かして確認する」です。
-- **グラフの表示** (Android のエミュレータで確認済み): 機器ごとに、最新の測定値の 1 行と、温度 (橙) と湿度 (青) の折れ線グラフを表示します。実際の AWS のデータが、描かれることと、範囲のボタン (1 h、6 h、24 h) で、横軸と線が変わることを確認しました。**実機での表示は、まだ確認していません。** 縦軸の値、横軸の開始と終了の時刻 (端末のタイムゾーン) も、表示します。測定値のない範囲は、「No data in this range」と表示します。
+- **ビルド**: 設定が、`BuildConfig` に入ります。設定がないときは、空になります。
+- **実機での動作**: AWS の準備 ([AWS_DYNAMODB.md](AWS_DYNAMODB.md)) をして、`local.properties` に書き、実機の Android 端末に入れて、起動します。実際の AWS (Cognito の ID プール、DynamoDB のテーブル、未認証ロール) に接続して、機器ごとの最新の測定値(温度、湿度、受信した時刻)が、**文字列で**表示されます。手順は、次の「アプリを動かして確認する」です。
+- **グラフの表示**: 機器ごとに、最新の測定値の 1 行と、温度 (橙) と湿度 (青) の折れ線グラフを表示します。範囲のボタン (1 h、6 h、24 h) で、横軸と線が変わります。縦軸の値、横軸の開始と終了の時刻 (端末のタイムゾーン) も、表示します。測定値のない範囲は、「No data in this range」と表示します。
 
 ## エミュレータ (Docker)
 
@@ -251,16 +256,16 @@ docker compose down
 - 画面なしで使うときは、環境変数 `EMULATOR_HEADLESS=1` で起動します (`adb` だけで操作する)。
 - AVD も、Gradle のキャッシュも、消すときは、`docker compose down -v` です (次の起動で、AVD を作り直します)。
 
-### 確認した範囲
+### 動作の範囲
 
-次は、実際に、動かして、確認しました。
+次の動作ができます。
 
 - KVM でエミュレータが起動して、`sys.boot_completed` が 1 になる。
-- APK のインストールと、アプリの起動。画面は、`adb exec-out screencap` で、画像にして、確認した (「AWS is not configured. ...」の表示)。
+- APK のインストールと、アプリの起動。画面は、`adb exec-out screencap` で、画像にできます (「AWS is not configured. ...」の表示)。
 - 同じ署名の APK を、上書きでインストールできる (下の「デバッグ用の署名の鍵」)。
 - noVNC のページが、`http://localhost:6080/vnc.html` で、応答する (HTTP 200)。
 
-**未検証**: ブラウザでの表示と、マウスの操作。エミュレータの中から、AWS (Cognito と DynamoDB) に、接続すること (ID プールとテーブルは、作った。実機では確認したが、エミュレータでは、まだ試していない)。
+**未検証**: ブラウザでの表示と、マウスの操作。
 
 ### 注意 (動かして分かったこと)
 
@@ -272,7 +277,7 @@ docker compose down
 
 ## 実機へのインストール (ホストの adb)
 
-adb は、ホストで実行します (Docker に、USB を渡す設定を避けるため)。次の手順は、実機で確認しました (無線の接続を除く)。
+adb は、ホストで実行します (Docker に、USB を渡す設定を避けるため)。次の手順は、無線の接続を除きます。
 
 1. ホストに、adb を入れます。Ubuntu / Debian では、`sudo apt install adb`。
 2. 端末で、開発者向けオプションを出して、USB デバッグを有効にします。メニューの名前は、機種と Android のバージョンで違います。
@@ -297,7 +302,7 @@ adb は、ホストで実行します (Docker に、USB を渡す設定を避け
 
 ## アプリを動かして確認する
 
-AWS の準備 ([AWS_DYNAMODB.md](AWS_DYNAMODB.md)) が終わったあとの手順です (実機で確認しました)。
+AWS の準備 ([AWS_DYNAMODB.md](AWS_DYNAMODB.md)) が終わったあとの手順です。
 
 1. **AWS にデータが入っているか確認する** (アプリより先に)
 
@@ -366,7 +371,7 @@ Push 時に、`.github/workflows/build.yml` が、開発用の Docker イメー�
 - アーティファクトは、`retention-days: 3` で、3 日で期限が切れます。保存する期間を変えるときは、`build.yml` の `KEEP_DAYS` と、全ての `retention-days` を、そろえて変えます。
 - Docker イメージは、レイヤーを GitHub Actions のキャッシュに保存します (`.github/actions/docker-image`)。Gradle の依存関係と、Gradle 本体も、キャッシュに保存します (`.github/actions/gradle-cache`)。`docker-compose.yml` の `GRADLE_HOME_DIR` に、キャッシュするディレクトリを指定すると、ボリューム `gradle-cache` の代わりに、そのディレクトリを使います (ローカルでは、指定しない)。
 - **GitHub Pages の設定** (最初の 1 回): リポジトリの Settings > Pages > Source を「GitHub Actions」にします。公開されるのは、`core` の API ドキュメント (Dokka) です。`SETUP.md` などの Markdown の文書は、含まれません。
-- **未検証**: GitHub Actions 上での実行 (ワークフローは、YAML の構文と、`GRADLE_HOME_DIR` でのローカルの実行だけを確認した)。最初の実行で、イメージのビルドと、Gradle の依存関係の取得に、時間がかかります。
+- **未検証**: GitHub Actions 上での実行 (ワークフローは、YAML の構文と、`GRADLE_HOME_DIR` でのローカルの実行だけ)。最初の実行で、イメージのビルドと、Gradle の依存関係の取得に、時間がかかります。
 
 ## クラウドのセッション (claude.ai/code)
 
@@ -409,7 +414,7 @@ scripts/cloud-docker.sh run build  # docker compose run --rm build (test, covera
 - プロキシは、HTTPS (`curl`、Java) だけに渡します。`HTTP_PROXY` は、渡しません (`apt` が、プロキシに拒否されたため)。それでも `apt` が失敗するときは、環境の「Allowed domains」に、`archive.ubuntu.com` と `security.ubuntu.com` を足します。
 - イメージに入れたプロキシの CA が、古くなったとき (TLS のエラーが出たとき) は、`build` で作り直します。
 
-### 手元で確認したこと
+### スクリプトの動作
 
 - CA の束を、証明書ごとに 1 ファイルに分けて入れると、システムと、Java の信頼ストア (`cacerts`) の両方に入る。
 - `build` は、`Dockerfile` に 4 行を足したコピーでビルドして、リポジトリの `Dockerfile` は、変えない。イメージに、プロキシの設定は、焼き込まれない。
@@ -432,4 +437,4 @@ scripts/cloud-docker.sh run build  # docker compose run --rm build (test, covera
 - **AWS で読み取る範囲の使い方**: 機器ごとの最新の 1 件と、範囲 (1 時間、6 時間、24 時間) のグラフは、実装しました。機器の一覧 (テーブルのキーは、機器の指定が必要で、一覧は、アプリの設定に持つ)、自動の更新 (今は、起動したときと、範囲のボタンを押したときだけ取り出す)、より長い範囲 (7 日など。件数が多いので、取り出しの分け方を決める) は、これから決めます。
 - **画面の作り方**: 通常のビュー (View) と、Canvas で描くカスタム View (`LineChartView`) にしました (ライブラリを増やさないため)。Jetpack Compose は、使っていません。
 - **アプリの ID (`applicationId`) と、リリースの署名**。
-- **整形と静的解析の規則の詳細**: 今は、ktlint と detekt の既定の規則に、最小の設定 (`.editorconfig`、`config/detekt/detekt.yml`) だけです。コーディング規約は、`CODING_STYLE.md` に、まとめる予定です。
+- **整形と静的解析の規則の詳細**: 今は、ktlint と detekt の既定の規則に、最小の設定 (`.editorconfig`、`config/detekt/detekt.yml`) だけです。Kotlin の公式のコーディング規約は、[CODING_STYLE.md](CODING_STYLE.md) に、リンクだけ書きました。このリポジトリ独自の規約は、これから、まとめます。

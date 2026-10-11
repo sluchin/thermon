@@ -24,7 +24,7 @@ Kotlin で作る Android アプリ。AWS の DynamoDB に保存された温度�
 - エミュレータ (KVM。`export KVM_GID=$(getent group kvm | cut -d: -f3)` が要る。イメージは約 10.7 GB): `docker compose build emulator` → `docker compose up -d emulator` → `docker compose exec emulator scripts/emulator-wait.sh` → `docker compose exec emulator adb install -r app/build/outputs/apk/debug/app-debug.apk`。画面は <http://localhost:6080/vnc.html>、画像にするときは `adb exec-out screencap -p > build/emulator-screen.png`。止めるのは `docker compose down` (`SETUP.md` の「エミュレータ (Docker)」) (中で `./gradlew ...` を、直接実行できる)
 
 ### 実機への転送 (ホストの adb)
-- `adb install -r app/build/outputs/apk/debug/app-debug.apk` (ホストに adb を入れる。`SETUP.md` の「実機へのインストール」と「アプリを動かして確認する」。実機で確認済み)
+- `adb install -r app/build/outputs/apk/debug/app-debug.apk` (ホストに adb を入れる。`SETUP.md` の「実機へのインストール」と「アプリを動かして確認する」)
 
 ### クラウドのセッション (claude.ai/code) で Docker を使うとき
 
@@ -44,9 +44,9 @@ scripts/cloud-docker.sh start          # Docker のデーモンを起動する (
 - **`cloud-docker.sh` がしていること**: `Dockerfile` を、一時的にコピーして (リポジトリは、変えない)、CA を、**証明書ごとに 1 ファイルに分けて**、信頼ストアに入れる行を足す (束を 1 ファイルのまま入れると、Java の信頼ストアには、最初の 1 枚しか入らず、Gradle が PKIX のエラーで落ちる)。`--network host` を付け、プロキシを、`ARG` で渡す (`ENV` には、焼き込まない)。**プロキシは、HTTPS (`curl`、Java) だけに渡し、`HTTP_PROXY` は渡さない** (`apt` は、Ubuntu のミラーに、HTTP で接続するので、`HTTP_PROXY` を渡すと、プロキシに拒否されて失敗した。渡さなければ、プロキシを通さずに、直接つながる)。`apt` が、それでも失敗するときは、環境の「Allowed domains」に、`archive.ubuntu.com` と `security.ubuntu.com` を足す。実行 (`run`) のときは、`network_mode: host` と、プロキシの環境変数と、`JAVA_TOOL_OPTIONS` (Java のプロキシ) を足す。コンテナは、root で動く (`build/` などは、root 所有になる)。
 - イメージに入った CA は、セッションが変わって、プロキシの CA が変わったときは、古くなる。TLS のエラーが出たら、`scripts/cloud-docker.sh build` で、作り直す。
 - **Maven Central の `429 Too Many Requests`** (共有の出口の IP が、回数制限を受ける)。Google のミラー `maven-central.storage-download.googleapis.com` を、先に参照する。`scripts/cloud-docker.sh run` が、クラウドのときに、毎回、`scripts/maven-mirror.init.gradle.kts` を、Gradle のホーム (`/var/cache/thermon-gradle`。`GRADLE_HOME_DIR` で変えられる) の `init.d/` に置く (環境変数も、セットアップスクリプトも、要らない)。ミラーに届かないときは、`WARNING` を出す (「Allowed domains」に、ミラーのドメインを足す)。初期化スクリプトを、貼り付けで作ると、全角スペースが混ざって壊れたことがあるので、リポジトリのファイルにした。
-- **確認した範囲** (2026-10-11): クラウドで、`scripts/cloud-docker.sh build` と `scripts/cloud-docker.sh run build` が、成功した (APK 4.7 MB)。クラウドのセッションのコミットの名前も、`Tetsuya Higashi` になった (環境変数 `GIT_AUTHOR_NAME` などが、効いた)。クラウドで、`test` (2 分 15 秒)、`coverage` (12 秒。`core` の行と分岐が 100%)、`analyze` (50 秒。detekt と Android Lint)、`format` (27 秒)、`docs` (32 秒。Dokka の警告なし) も、すべて成功した (Kotlin と Dokka の警告は、なかった)。**クラウドでは、`build`、`test`、`coverage`、`analyze`、`format`、`docs` の全てを、確認した。**
-  - **`run build` が、2 回失敗した理由と、直し方**: ミラーに成果物がない (404) と、次の `repo.maven.apache.org` (Maven Central) が 429 を返す。Gradle は、429 で解決を打ち切り、後ろのリポジトリに進まない。ktlint のプラグインは、Plugin Portal にしかないので、解決できなかった。`scripts/maven-mirror.init.gradle.kts` で、プラグインの解決の順を「ミラー、`google()`、Plugin Portal (`https://plugins.gradle.org/m2/`)」にして、直した (ブランチ `ccr-b12f7fd7-cyffyr` のコミット `987e131`。手元でも、ビルドの成功を確認した)。Portal だけを足すと、Portal が Maven Central に転送して、429 になり、`google()` にある AGP を解決できないので、`google()` を、Portal の前に置く。
-- **Docker Hub の `429`** (ベースのイメージ `ubuntu:24.04` の取得): `scripts/cloud-docker.sh build` が、失敗したときは、Google のミラー `mirror.gcr.io/library/ubuntu:24.04` から取って、`ubuntu:24.04` のタグを付けてから、ビルドする (スクリプトが、自動でする。手元では、偽物の `docker` で、流れを確認した。クラウドでは、手動で、同じ回避をして、成功した)。
+- **クラウドでの結果**: `scripts/cloud-docker.sh build` と `scripts/cloud-docker.sh run build` が、成功した (APK 4.7 MB)。クラウドのセッションのコミットの名前も、`Tetsuya Higashi` になった (環境変数 `GIT_AUTHOR_NAME` などが、効く)。`test` (2 分 15 秒)、`coverage` (12 秒。`core` の行と分岐が 100%)、`analyze` (50 秒。detekt と Android Lint)、`format` (27 秒)、`docs` (32 秒。Dokka の警告なし) も、成功する。
+  - **`run build` が、2 回失敗した理由と、直し方**: ミラーに成果物がない (404) と、次の `repo.maven.apache.org` (Maven Central) が 429 を返す。Gradle は、429 で解決を打ち切り、後ろのリポジトリに進まない。ktlint のプラグインは、Plugin Portal にしかないので、解決できなかった。`scripts/maven-mirror.init.gradle.kts` で、プラグインの解決の順を「ミラー、`google()`、Plugin Portal (`https://plugins.gradle.org/m2/`)」にして、直した (ブランチ `ccr-b12f7fd7-cyffyr` のコミット `987e131`)。Portal だけを足すと、Portal が Maven Central に転送して、429 になり、`google()` にある AGP を解決できないので、`google()` を、Portal の前に置く。
+- **Docker Hub の `429`** (ベースのイメージ `ubuntu:24.04` の取得): `scripts/cloud-docker.sh build` が、失敗したときは、Google のミラー `mirror.gcr.io/library/ubuntu:24.04` から取って、`ubuntu:24.04` のタグを付けてから、ビルドする (スクリプトが、自動でする。)。
 - 同じ失敗を、繰り返さない。Docker を使わずに、VM の上で、直接ビルドする方法も、ある。
 
 ## プロジェクト構成
@@ -55,7 +55,7 @@ scripts/cloud-docker.sh start          # Docker のデーモンを起動する (
 - `app/`: Android。画面と、設定の読み込み (`BuildConfig`) だけの、薄い層。ロジックは、`core` に置く (UI は、単体テストの対象外)。
 - `gradle/libs.versions.toml`: ライブラリとプラグインの版 (版カタログ)。版を変えるときは、ここだけ。
 - `config/detekt/detekt.yml`: detekt の規則 (既定に、上書きするものだけ)。
-- `Dockerfile` (2 段: dev と emulator) / `docker-compose.yml` / `scripts/` (エミュレータの起動と待ち合わせ): 開発環境。`SETUP.md`: 環境構築と、検証の記録。
+- `Dockerfile` (2 段: dev と emulator) / `docker-compose.yml` / `scripts/` (エミュレータの起動と待ち合わせ、クラウドのセッションで Docker を使う補助 `cloud-docker.sh`、Maven のミラーの設定): 開発環境。`.github/`: GitHub Actions。`SETUP.md`: 環境構築と、検証の記録。
 
 ## AWS の設定と、秘密情報
 
@@ -65,7 +65,7 @@ scripts/cloud-docker.sh start          # Docker のデーモンを起動する (
 
 ## コーディング規約
 
-ktlint (Kotlin 公式のスタイル) と、detekt (既定の規則) に従う。迷ったら、ツールが正しい。
+ktlint (Kotlin 公式のスタイル) と、detekt (既定の規則) に従う。迷ったら、ツールが正しい。Kotlin 公式のコーディング規約へのリンクは、`CODING_STYLE.md`。
 
 - **インデントは、空白 4 つ。1 行は、100 桁まで** (`.editorconfig`)。整形は、`format-fix` が行う (手で、整形しない)。
 - **ファイルの先頭に、著作権とライセンスを書く**:
@@ -111,7 +111,7 @@ ktlint (Kotlin 公式のスタイル) と、detekt (既定の規則) に従う�
   7. `docker compose run --rm docs` (ドキュメント。KDoc を変えたときは、必ず)
 - ビルドや、テストを実行できなかったときは、そのことを報告する (成功したとは書かない)。
 - **例外**: 変更が、`SETUP.md`、`README.md`、`.claude/CLAUDE.md` などの文書だけの場合は、ビルドしない。
-- ビルドやコマンド、ツールの版を変えたら、`SETUP.md` も更新する (版は、実際に動かして、確認したものだけを書く)。
+- ビルドやコマンド、ツールの版を変えたら、`SETUP.md` も更新する (版は、実際に使うものだけを書く)。
 - ファイルを追加したら、Gradle の設定 (`build.gradle.kts`) と、必要なら、`SETUP.md` の構成も更新する。
 
 ### タスク完了時の動作
@@ -127,7 +127,7 @@ ktlint (Kotlin 公式のスタイル) と、detekt (既定の規則) に従う�
 - **カバレッジ**: `core` の行と分岐は、100% (JaCoCo の `jacocoTestCoverageVerification`)。ソースを足したり、関数を変えたりしたら、対応するテストを足す (正常系と、エラーの伝わり方)。到達しない分岐を作らない (到達しない `?: return` などを、書かない)。
 - **テストの名前**: `<対象の関数名><条件>` を、キャメルケースで (例: `resolveFailsWithoutIdentityId`)。KDoc で、何を確認するかを書く。
 - **時刻と乱数**: 外の状態は、引数で渡して、固定する (`CognitoUnauthenticatedCredentials` の `now` のように)。実際の時計を使う動作は、別に 1 つだけ、テストする。
-- **実機と AWS での確認は、別に必要**: 実際の AWS への接続 (ID プール、テーブル、権限)、画面の表示、実機へのインストールは、単体テストでは、確認できない (文字列の表示は、実機で確認済み。グラフの表示は、エミュレータで確認した。実機では、まだ確認していない。画面を変えたら、また確認する)。
+- **実機と AWS での確認は、別に必要**: 実際の AWS への接続 (ID プール、テーブル、権限)、画面の表示、実機へのインストールは、単体テストでは、確認できない (画面を変えたら、実機でも見る)。
 
 ## 落とし穴 (検証で分かったこと。詳細は SETUP.md)
 

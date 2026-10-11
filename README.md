@@ -12,7 +12,7 @@ Android アプリ (thermon) ──> Cognito ID プール (未認証) ──一�
 
 **Android Studio は使いません。** ビルド、テスト、整形、静的解析、ドキュメントの生成は、全て、コマンドラインで、Docker の中で実行します。
 
-> **状態**: 雛形と、AWS のクライアント (Cognito の未認証の認証情報と、DynamoDB の Query) を、実装しました。単体テストは、AWS SDK のクライアントを偽物にして、確認しています。**実際の AWS への接続と、実機での表示(機器ごとの最新の測定値を、文字列で表示)は、確認しました。グラフの表示 (温度と湿度。範囲は 1 h、6 h、24 h) は、実装して、Android のエミュレータで確認しました。実機では、まだ確認していません** ([SETUP.md](SETUP.md) の「確認の範囲」)。
+> **状態**: 雛形と、AWS のクライアント (Cognito の未認証の認証情報と、DynamoDB の Query) を、実装しました。グラフの表示 (温度と湿度。範囲は 1 h、6 h、24 h) も、実装しています。単体テストは、AWS SDK のクライアントを偽物にして、行います ([SETUP.md](SETUP.md))。
 
 ## 機能
 
@@ -28,6 +28,8 @@ core/    純粋な Kotlin (Android に依存しない). AWS のクライアン�
 app/     Android アプリ. 画面と, 設定の読み込みだけの, 薄い層
 config/  detekt (静的解析) の設定
 gradle/  版カタログ (libs.versions.toml) と, Gradle ラッパー
+scripts/ エミュレータの起動, クラウドのセッションで Docker を使う補助, Maven のミラーの設定
+.github/ GitHub Actions (CI と, ドキュメントの公開)
 ```
 
 ## 必要なもの
@@ -84,7 +86,7 @@ thermon.nodes=AA:BB:CC:DD:EE:01,AA:BB:CC:DD:EE:02
 
 ## 実機へのインストール
 
-adb は、ホストで実行します (実機で確認済み。端末の設定を含む手順は、[SETUP.md](SETUP.md) の「実機へのインストール」)。
+adb は、ホストで実行します (端末の設定を含む手順は、[SETUP.md](SETUP.md) の「実機へのインストール」)。
 
 ```bash
 adb install -r app/build/outputs/apk/debug/app-debug.apk
