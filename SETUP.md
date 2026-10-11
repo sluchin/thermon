@@ -372,7 +372,7 @@ Push 時に、`.github/workflows/build.yml` が、開発用の Docker イメー�
 
 スマホやブラウザのクラウドのセッション (Claude Code on the web) で、ビルドするための設定です。クラウドの VM は、通信を、プロキシ経由にするので、コンテナ (Docker) の中の通信は、そのままでは、失敗します (curl の終了コード 60)。`scripts/cloud-docker.sh` が、これを避けます。
 
-> **状態**: クラウドで、手動の同じ手順で、`build` が成功しました。`scripts/cloud-docker.sh` は、手元で確認しましたが、**クラウドで実行することは、まだ確認していません**。
+> **状態** (2026-10-11): クラウドで、`scripts/cloud-docker.sh build` と `scripts/cloud-docker.sh run build` が、成功しました (APK 4.7 MB)。`format`、`analyze`、`test`、`coverage`、`docs` は、クラウドでは、まだ実行していません。プラグインの解決の順 (ミラー、`google()`、Plugin Portal) の修正は、ブランチ `ccr-b12f7fd7-cyffyr` にあります (まだ main に入っていません)。
 
 ### 環境の設定 (ブラウザ)
 

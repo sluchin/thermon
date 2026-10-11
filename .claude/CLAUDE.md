@@ -7,6 +7,8 @@ Kotlin で作る Android アプリ。AWS の DynamoDB に保存された温度�
 
 ## コマンド
 
+> **クラウドのセッション (claude.ai/code。スマホのアプリを含む。環境変数 `CLAUDE_CODE_REMOTE` が `true`) では、下の `docker compose run --rm <サービス>` を使わず、`scripts/cloud-docker.sh run <サービス>` で実行する** (`build`、`test`、`coverage`、`format`、`format-fix`、`analyze`、`docs`)。通常の `docker compose` は、プロキシの設定がないため、curl の終了コード 60 や、Maven Central の 429 で失敗する。詳しくは、下の「クラウドのセッション (claude.ai/code) で Docker を使うとき」。
+
 ### Docker (推奨)
 - `docker compose run` には、必ず `--rm` を付ける (終わったコンテナを、残さないため)。
 - `UID` と `GID` を、シェルでエクスポートしておく (生成物が、root 所有にならないように。`SETUP.md` の「2. ホストのユーザー ID を環境変数にエクスポートする」)。
@@ -42,7 +44,8 @@ scripts/cloud-docker.sh start          # Docker のデーモンを起動する (
 - **`cloud-docker.sh` がしていること**: `Dockerfile` を、一時的にコピーして (リポジトリは、変えない)、CA を、**証明書ごとに 1 ファイルに分けて**、信頼ストアに入れる行を足す (束を 1 ファイルのまま入れると、Java の信頼ストアには、最初の 1 枚しか入らず、Gradle が PKIX のエラーで落ちる)。`--network host` を付け、プロキシを、`ARG` で渡す (`ENV` には、焼き込まない)。**プロキシは、HTTPS (`curl`、Java) だけに渡し、`HTTP_PROXY` は渡さない** (`apt` は、Ubuntu のミラーに、HTTP で接続するので、`HTTP_PROXY` を渡すと、プロキシに拒否されて失敗した。渡さなければ、プロキシを通さずに、直接つながる)。`apt` が、それでも失敗するときは、環境の「Allowed domains」に、`archive.ubuntu.com` と `security.ubuntu.com` を足す。実行 (`run`) のときは、`network_mode: host` と、プロキシの環境変数と、`JAVA_TOOL_OPTIONS` (Java のプロキシ) を足す。コンテナは、root で動く (`build/` などは、root 所有になる)。
 - イメージに入った CA は、セッションが変わって、プロキシの CA が変わったときは、古くなる。TLS のエラーが出たら、`scripts/cloud-docker.sh build` で、作り直す。
 - **Maven Central の `429 Too Many Requests`** (共有の出口の IP が、回数制限を受ける)。Google のミラー `maven-central.storage-download.googleapis.com` を、先に参照する。`scripts/cloud-docker.sh run` が、クラウドのときに、毎回、`scripts/maven-mirror.init.gradle.kts` を、Gradle のホーム (`/var/cache/thermon-gradle`。`GRADLE_HOME_DIR` で変えられる) の `init.d/` に置く (環境変数も、セットアップスクリプトも、要らない)。ミラーに届かないときは、`WARNING` を出す (「Allowed domains」に、ミラーのドメインを足す)。初期化スクリプトを、貼り付けで作ると、全角スペースが混ざって壊れたことがあるので、リポジトリのファイルにした。
-- **確認した範囲**: クラウドで、手動の同じ手順で、`build` が成功した (APK 4.6 MB。ミラー 472 件、`repo.maven.apache.org` 0 件)。`cloud-docker.sh` は、手元 (ローカル) で、CA が、システムと Java の信頼ストアに入ること、`run` が、プロキシの環境変数を渡して、ホストのネットワークで動くこと、イメージにプロキシが焼き込まれないことを、確認した。**`cloud-docker.sh` を、クラウドで実行することは、まだ確認していない。** `format`、`analyze`、`test`、`coverage`、`docs` も、クラウドでは、未実行。1 回目の `build` が、ktlint プラグインの解決で失敗し、再実行で成功したことがある (原因は、特定していない)。
+- **確認した範囲** (2026-10-11): クラウドで、`scripts/cloud-docker.sh build` と `scripts/cloud-docker.sh run build` が、成功した (APK 4.7 MB)。クラウドのセッションのコミットの名前も、`Tetsuya Higashi` になった (環境変数 `GIT_AUTHOR_NAME` などが、効いた)。クラウドで、`format`、`analyze`、`test`、`coverage`、`docs` は、まだ実行していない。
+  - **`run build` が、2 回失敗した理由と、直し方**: ミラーに成果物がない (404) と、次の `repo.maven.apache.org` (Maven Central) が 429 を返す。Gradle は、429 で解決を打ち切り、後ろのリポジトリに進まない。ktlint のプラグインは、Plugin Portal にしかないので、解決できなかった。`scripts/maven-mirror.init.gradle.kts` で、プラグインの解決の順を「ミラー、`google()`、Plugin Portal (`https://plugins.gradle.org/m2/`)」にして、直した (ブランチ `ccr-b12f7fd7-cyffyr` のコミット `987e131`。手元でも、ビルドの成功を確認した)。Portal だけを足すと、Portal が Maven Central に転送して、429 になり、`google()` にある AGP を解決できないので、`google()` を、Portal の前に置く。
 - 同じ失敗を、繰り返さない。Docker を使わずに、VM の上で、直接ビルドする方法も、ある。
 
 ## プロジェクト構成
@@ -96,6 +99,7 @@ ktlint (Kotlin 公式のスタイル) と、detekt (既定の規則) に従う�
 
 ### コード修正時のルール
 
+- クラウドのセッションでは、次の `docker compose run --rm <サービス>` を、`scripts/cloud-docker.sh run <サービス>` に読み替える。
 - コードを修正したら、次の順に、全て成功することを確認する。**どれも、警告を出さない。** 警告やエラーが出たら修正して、出なくなるまで繰り返す。
   1. `docker compose run --rm format-fix` (整形。自動で直せない指摘があると、終了コード 1 になる)
   2. `docker compose run --rm format` (整形の確認)
