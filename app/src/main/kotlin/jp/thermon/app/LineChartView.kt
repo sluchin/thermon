@@ -13,6 +13,8 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.util.AttributeSet
 import android.util.TypedValue
+import android.view.GestureDetector
+import android.view.MotionEvent
 import android.view.View
 import jp.thermon.core.ChartAxis
 import jp.thermon.core.ChartSeries
@@ -63,6 +65,12 @@ private const val GRID_LINES = 3
 /** 補助線の中央の位置を求めるための値. */
 private const val HALF = 2f
 
+/** 長押ししたときの縦線の太さ (dp). */
+private const val CURSOR_WIDTH_DP = 1.5f
+
+/** 値がないときに表示する文字. */
+private const val NO_VALUE = "--"
+
 /** 凡例の名前と名前の間の隙間 (dp). */
 private const val LEGEND_GAP_DP = 12f
 
@@ -77,14 +85,6 @@ class ChartLine(
     val name: String,
     val color: Int,
     val series: ChartSeries,
-)
-
-/** グラフの描く範囲 (View の中の, 左右上下の位置. px). */
-private class Plot(
-    val left: Float = 0f,
-    val top: Float = 0f,
-    val right: Float = 0f,
-    val bottom: Float = 0f,
 )
 
 /**
@@ -140,6 +140,65 @@ class LineChartView
         private var emptyText = ""
         private var lines: List<ChartLine> = emptyList()
         private var zone: ZoneId = ZoneId.systemDefault()
+        private var touchX: Float? = null
+
+        /** 縦軸の値に, 単位を付けた文字列にする (例: 21.4 °C). */
+        private val label: (Double) -> String = { "${formatChartValue(it)} $unit" }
+        private val cursorPaint =
+            Paint().apply {
+                style = Paint.Style.STROKE
+                strokeWidth = CURSOR_WIDTH_DP * density
+                color = textColor
+            }
+        private val readout = ReadoutPainter(textPaint, density, textColor)
+        private val gestures =
+            GestureDetector(
+                context,
+                object : GestureDetector.SimpleOnGestureListener() {
+                    override fun onDown(e: MotionEvent): Boolean = true
+
+                    override fun onLongPress(e: MotionEvent) {
+                        // 縦線を動かしている間は, 親の ScrollView に, スクロールさせない
+                        parent?.requestDisallowInterceptTouchEvent(true)
+                        touchX = e.x
+                        invalidate()
+                    }
+                },
+            )
+
+        /**
+         * 長押しで縦線と値を出し, 押したまま動かすと, 縦線が付いてくる. 離すと消える.
+         *
+         * @param event タッチのイベント
+         * @return 常に true (長押しを検出するため, 押し始めから受け取る)
+         */
+        override fun onTouchEvent(event: MotionEvent): Boolean {
+            gestures.onTouchEvent(event)
+            when (event.actionMasked) {
+                MotionEvent.ACTION_MOVE ->
+                    if (touchX != null) {
+                        touchX = event.x
+                        invalidate()
+                    }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (touchX == null &&
+                        event.actionMasked == MotionEvent.ACTION_UP
+                    ) {
+                        performClick()
+                    }
+                    touchX = null
+                    invalidate()
+                }
+            }
+            return true
+        }
+
+        /**
+         * タップを通知する (アクセシビリティのため).
+         *
+         * @return 親クラスの結果
+         */
+        override fun performClick(): Boolean = super.performClick()
 
         /**
          * タイトルと単位を決める.
@@ -225,6 +284,32 @@ class LineChartView
             drawLegend(canvas)
             drawLabels(canvas, axis)
             lines.forEach { drawLine(canvas, it, axis) }
+            touchX?.let { drawCursor(canvas, axis, it) }
+        }
+
+        /**
+         * 長押しした位置の縦線と, その時刻と値を描く.
+         *
+         * 縦線は, 最も近い点に吸い付く (点がなければ, 指の位置). 値は, 線ごとに, 最も近い点の値.
+         *
+         * @param canvas 描く先
+         * @param axis 共通の軸
+         * @param touch 指の x 座標 (px)
+         */
+        private fun drawCursor(
+            canvas: Canvas,
+            axis: ChartAxis,
+            touch: Float,
+        ) {
+            val cursor = cursorAt(plot, axis, lines, touch)
+            canvas.drawLine(cursor.x, plot.top, cursor.x, plot.bottom, cursorPaint)
+            val rows =
+                listOf(formatChartTime(cursor.ts, zone) to textColor) +
+                    cursor.entries.map { (name, color, point) ->
+                        val value = point?.let { label(it.value) } ?: NO_VALUE
+                        "$name  $value" to color
+                    }
+            readout.draw(canvas, plot, cursor.x, rows)
         }
 
         /**
@@ -319,14 +404,6 @@ class LineChartView
                 canvas.drawPath(path, linePaint)
             }
         }
-
-        /**
-         * 縦軸の値に, 単位を付けた文字列にする.
-         *
-         * @param value 値
-         * @return 文字列 (例: 21.4 °C)
-         */
-        private fun label(value: Double): String = "${formatChartValue(value)} $unit"
     }
 
 /**

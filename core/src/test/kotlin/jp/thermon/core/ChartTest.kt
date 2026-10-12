@@ -165,4 +165,33 @@ class ChartTest {
     fun commonAxisEmpty() {
         assertNull(commonAxis(emptyList()))
     }
+
+    /** 横軸の位置から時刻を求める (範囲の外は, 端にそろえる). */
+    @Test
+    fun timeAtFractionMapsPosition() {
+        assertEquals(FROM, timeAtFraction(WINDOW, 0.0))
+        assertEquals(1500L, timeAtFraction(WINDOW, 0.5))
+        assertEquals(TO, timeAtFraction(WINDOW, 1.0))
+        assertEquals(FROM, timeAtFraction(WINDOW, -0.3))
+        assertEquals(TO, timeAtFraction(WINDOW, 1.7))
+    }
+
+    /** 最も近い点を返す. 区切り 1 つ分より遠いときと, 点がないときは, null. */
+    @Test
+    fun nearestPointFindsClosest() {
+        val series =
+            assertNotNull(
+                buildChartSeries(
+                    listOf(reading(1050, 20.0), reading(1150, 22.0), reading(1850, 25.0)),
+                    WINDOW,
+                    4.0,
+                ) { it.temperatureC },
+            )
+
+        assertEquals(ChartPoint(1050, 20.0), nearestPoint(series, 1000))
+        assertEquals(ChartPoint(1150, 22.0), nearestPoint(series, 1140))
+        assertEquals(ChartPoint(1850, 25.0), nearestPoint(series, 1900))
+        assertNull(nearestPoint(series, 1500))
+        assertNull(nearestPoint(ChartSeries(emptyList(), WINDOW, 0.0, 1.0), 1500))
+    }
 }

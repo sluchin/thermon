@@ -7,6 +7,7 @@
 package jp.thermon.core
 
 import java.util.TreeMap
+import kotlin.math.abs
 
 /** 1 本の線の点の数 (範囲の長さを, この数で割った時間ごとに, 測定値を平均する). */
 private const val CHART_POINTS = 120L
@@ -203,3 +204,34 @@ fun buildChartSeries(
     val margin = if (span < minSpan) (minSpan - span) / HALF else span * MARGIN_RATIO
     return ChartSeries(segments, window, low - margin, high + margin)
 }
+
+/**
+ * 横軸の位置から, その位置の時刻を求める (グラフを長押ししたときの縦線の時刻).
+ *
+ * @param window 横軸の窓
+ * @param fraction 位置 (0.0 が左端, 1.0 が右端. 範囲の外は, 端にそろえる)
+ * @return 時刻 (UNIX 時刻 (s))
+ */
+fun timeAtFraction(
+    window: ChartWindow,
+    fraction: Double,
+): Long = window.fromTs + ((window.toTs - window.fromTs) * fraction.coerceIn(0.0, 1.0)).toLong()
+
+/**
+ * 線の点のうち, 指定の時刻に最も近い点を探す.
+ *
+ * 距離が区切り 1 つ分 ([ChartWindow.bucketSeconds]) を超えるときは, その時刻にデータがない
+ * (線が切れている, または, 範囲の外) として, null を返す.
+ *
+ * @param series 線
+ * @param ts 時刻 (UNIX 時刻 (s))
+ * @return 最も近い点. なければ null
+ */
+fun nearestPoint(
+    series: ChartSeries,
+    ts: Long,
+): ChartPoint? =
+    series.segments
+        .flatten()
+        .minByOrNull { abs(it.ts - ts) }
+        ?.takeIf { abs(it.ts - ts) <= series.window.bucketSeconds }
