@@ -1,5 +1,5 @@
-# 共通の設定. コンテナは, ホストのユーザーで実行する (生成物が, root 所有にならないように).
-# UID と GID は, シェルでエクスポートしておく (SETUP.md)
+# 共通の設定. コンテナはホストのユーザーで実行する (生成物が root 所有にならないように).
+# UID と GID はシェルでエクスポートしておく (SETUP.md)
 x-common: &common
   build:
     context: .
@@ -8,15 +8,15 @@ x-common: &common
   image: thermon-dev:latest
   volumes:
     - .:/workspace
-    # Gradle のキャッシュ. 既定は, ボリューム gradle-cache. CI は, GRADLE_HOME_DIR に, キャッシュするディレクトリ
+    # Gradle のキャッシュ. 既定はボリューム gradle-cache. CI は GRADLE_HOME_DIR にキャッシュするディレクトリ
     # (絶対パス) を指定して, ボリュームの代わりに, そのディレクトリを使う (.github/actions/gradle-cache)
     - ${GRADLE_HOME_DIR:-gradle-cache}:/gradle-home
   working_dir: /workspace
   user: "${UID:-0}:${GID:-0}"
   environment:
     - HOME=/tmp
-    # デバッグ用の署名の鍵 (debug.keystore) を, ボリュームに残す. 残さないと, コンテナを起動するたびに,
-    # 鍵が作り直されて, 署名が変わり, 実機やエミュレータに, 上書きでインストールできない
+    # デバッグ用の署名の鍵 (debug.keystore) をボリュームに残す. 残さないと, コンテナを起動するたびに,
+    # 鍵が作り直されて, 署名が変わり, 実機やエミュレータに上書きでインストールできない
     - ANDROID_USER_HOME=/gradle-home/android
 
 services:
@@ -62,12 +62,12 @@ services:
     <<: *common
     command: ./gradlew --no-daemon :core:dokkaGenerate
 
-  # 生成物 (build/ と .gradle/ と .kotlin/) を消す. Gradle のキャッシュ (ボリューム) は, 消さない
+  # 生成物 (build/ と .gradle/ と .kotlin/) を消す. Gradle のキャッシュ (ボリューム) は消さない
   clean:
     <<: *common
     command: sh -c "rm -rf build core/build app/build .gradle .kotlin && echo 'Removed the build outputs'"
 
-  # Android エミュレータ (KVM で動かす). 画面は, ブラウザ (http://localhost:6080/vnc.html) で見る.
+  # Android エミュレータ (KVM で動かす). 画面はブラウザ (http://localhost:6080/vnc.html) で見る.
   # 起動: docker compose up emulator / 起動し終わるまで待つ: docker compose exec emulator scripts/emulator-wait.sh
   # APK を入れる: docker compose exec emulator adb install -r app/build/outputs/apk/debug/app-debug.apk
   emulator:
@@ -77,15 +77,15 @@ services:
       dockerfile: Dockerfile
       target: emulator
     image: thermon-emulator:latest
-    # エミュレータの AVD と adb の鍵は, ボリューム emulator-avd (/avd) に置く
+    # エミュレータの AVD と adb の鍵はボリューム emulator-avd (/avd) に置く
     environment:
       - HOME=/tmp
       - ANDROID_USER_HOME=/avd
     devices:
       - /dev/kvm:/dev/kvm
-    # コンテナの中の /dev/kvm は, ホストの kvm グループ専用になる (ホストの ACL は, 引き継がれない).
-    # ユーザーを, kvm グループに入れる. KVM_GID は, シェルで, エクスポートしておく
-    # (export KVM_GID=$(getent group kvm | cut -d: -f3)). 未設定のときは, root のグループ (0) で, 効果がない
+    # コンテナの中の /dev/kvm はホストの kvm グループ専用になる (ホストの ACL は引き継がれない).
+    # ユーザーを kvm グループに入れる. KVM_GID はシェルでエクスポートしておく
+    # (export KVM_GID=$(getent group kvm | cut -d: -f3)). 未設定のときは, root のグループ (0) で効果がない
     group_add:
       - "${KVM_GID:-0}"
     ports:

@@ -1,4 +1,4 @@
-# detekt の設定. 既定の規則 (buildUponDefaultConfig = true) に, 上書きするものだけを書く.
+# detekt の設定. 既定の規則 (buildUponDefaultConfig = true) に上書きするものだけを書く.
 build:
   # 指摘が 1 つでもあれば, 失敗する
   maxIssues: 0

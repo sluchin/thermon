@@ -1,9 +1,9 @@
-# 開発用のイメージ (dev). 最後の段 (emulator) は, エミュレータを動かすときだけ使う
+# 開発用のイメージ (dev). 最後の段 (emulator) はエミュレータを動かすときだけ使う
 FROM ubuntu:24.04 AS dev
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# ログの日本語 (Kotlin のメッセージ, KDoc の警告など) を, 文字化けさせない
+# ログの日本語 (Kotlin のメッセージ, KDoc の警告など) を文字化けさせない
 ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
 
@@ -35,26 +35,26 @@ RUN mkdir -p ${ANDROID_HOME}/cmdline-tools && \
 ENV PATH=${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${PATH}
 
 # SDK のコンポーネント. コンテナは一般ユーザーで動き, SDK は読み取り専用になる.
-# 足りないコンポーネントは, Gradle が, 実行時に, インストールできない. 必要になったら, ここに足す.
-# compileSdk 37 は, AWS SDK for Kotlin が使う OkHttp 5.5 の要求. build-tools は, app/build.gradle.kts で固定する.
+# 足りないコンポーネントは, Gradle が実行時にインストールできない. 必要になったら, ここに足す.
+# compileSdk 37 は AWS SDK for Kotlin が使う OkHttp 5.5 の要求. build-tools は app/build.gradle.kts で固定する.
 RUN yes | sdkmanager --licenses > /dev/null && \
     sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;37.0.0" && \
     chmod -R a+rX ${ANDROID_HOME}
 
-# Gradle のキャッシュ. 名前付きボリュームを mount する (空のボリュームは, この権限を引き継ぐ)
+# Gradle のキャッシュ. 名前付きボリュームを mount する (空のボリュームはこの権限を引き継ぐ)
 ENV GRADLE_USER_HOME=/gradle-home
 RUN mkdir -p /gradle-home && chmod 777 /gradle-home
 
-# コンテナはホストユーザーで実行されるが, イメージ内の /workspace は, そのユーザーの所有ではないため
+# コンテナはホストユーザーで実行されるが, イメージ内の /workspace はそのユーザーの所有ではないため
 RUN git config --system --add safe.directory '*'
 
 WORKDIR /workspace
 
-# エミュレータ用のイメージ (emulator). dev に, Android Emulator と, システムイメージと, 画面 (Xvfb と VNC) を足す.
-# 大きい (システムイメージが約 1.9 GB) ので, 別の段にして, ビルドと, テストの dev には, 入れない.
+# エミュレータ用のイメージ (emulator). dev に Android Emulator と, システムイメージと, 画面 (Xvfb と VNC) を足す.
+# 大きい (システムイメージが約 1.9 GB) ので, 別の段にして, ビルドとテストの dev には入れない.
 FROM dev AS emulator
 
-# 画面: Xvfb (仮想の画面), x11vnc, noVNC (ブラウザで見る). ライブラリ: エミュレータの Qt と, GL (ソフトウェア描画) に必要
+# 画面: Xvfb (仮想の画面), x11vnc, noVNC (ブラウザで見る). ライブラリ: エミュレータの Qt と GL (ソフトウェア描画) に必要
 RUN apt-get update && apt-get install -y --no-install-recommends \
     xvfb \
     x11vnc \
@@ -81,12 +81,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     procps \
     && rm -rf /var/lib/apt/lists/*
 
-# エミュレータ本体と, システムイメージ (API 36. Google API. x86_64). KVM で動かす
+# エミュレータ本体とシステムイメージ (API 36. Google API. x86_64). KVM で動かす
 ARG EMULATOR_IMAGE="system-images;android-36;google_apis;x86_64"
 RUN sdkmanager "emulator" "${EMULATOR_IMAGE}" && chmod -R a+rX ${ANDROID_HOME}
 ENV PATH=${ANDROID_HOME}/emulator:${PATH}
 
-# AVD (仮想の端末) と, adb の鍵の置き場. 名前付きボリュームを mount する (空のボリュームは, この権限を引き継ぐ)
+# AVD (仮想の端末) と adb の鍵の置き場. 名前付きボリュームを mount する (空のボリュームはこの権限を引き継ぐ)
 ENV ANDROID_USER_HOME=/avd
 ENV ANDROID_EMULATOR_HOME=/avd
 ENV ANDROID_AVD_HOME=/avd/avd

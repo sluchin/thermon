@@ -14,7 +14,7 @@ runs:
     - name: Build the image (with layer cache)
       uses: docker/build-push-action@v6
       env:
-        # ビルドの記録 (<owner>~<repo>~XXXXXX.dockerbuild) を, アーティファクトに保存しない
+        # ビルドの記録 (<owner>~<repo>~XXXXXX.dockerbuild) をアーティファクトに保存しない
         DOCKER_BUILD_RECORD_UPLOAD: "false"
       with:
         context: .

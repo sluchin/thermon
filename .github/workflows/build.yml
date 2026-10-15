@@ -1,15 +1,15 @@
 name: CI
 
-# 開発環境 (Dockerfile) と同じイメージで, docker compose のサービスを実行する.
-#   build   : デバッグ用の APK のビルド. 警告が出たら失敗する. ログを artifact に保存する (APK は, 保存しない)
+# 開発環境 (Dockerfile) と同じイメージで docker compose のサービスを実行する.
+#   build   : デバッグ用の APK のビルド. 警告が出たら失敗する. ログを artifact に保存する (APK は保存しない)
 #   test    : 単体テスト. ログを artifact に保存する
 #   coverage: core の行と分岐のカバレッジが 100% であること. ログを artifact に保存する
 #   format  : 整形の確認 (ktlint). 指摘があれば失敗する. ログを artifact に保存する
 #   analyze : 静的解析 (detekt と Android Lint). 指摘があれば失敗する. ログを artifact に保存する
 #   docs    : ドキュメント (Dokka の HTML). 警告があれば失敗する. ドキュメントとログを artifact に保存する
 #   deploy-docs: main への push のときだけ, ドキュメントを GitHub Pages へ公開する
-#   cleanup : 3 日より前の実行 (ログと artifact) を, push のたびに削除する. artifact は, 3 日で期限が切れる (retention-days)
-# イメージは, レイヤーを GitHub Actions のキャッシュに保存する (.github/actions/docker-image).
+#   cleanup : 3 日より前の実行 (ログと artifact) を push のたびに削除する. artifact は 3 日で期限が切れる (retention-days)
+# イメージはレイヤーを GitHub Actions のキャッシュに保存する (.github/actions/docker-image).
 # Gradle の依存関係も, キャッシュに保存する (.github/actions/gradle-cache).
 
 on:
