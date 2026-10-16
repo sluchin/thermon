@@ -6,6 +6,8 @@
 
 package jp.thermon.core
 
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.TreeMap
 import kotlin.math.abs
 
@@ -23,6 +25,15 @@ private const val RANGE_HOURS_6 = 6L
 
 /** 範囲の長さ (時間): 24 時間. */
 private const val RANGE_HOURS_24 = 24L
+
+/** 範囲の長さ (時間): 7 日. */
+private const val RANGE_HOURS_DAY_7 = 7L * 24L
+
+/** 範囲の長さ (時間): 30 日. */
+private const val RANGE_HOURS_DAY_30 = 30L * 24L
+
+/** 範囲の長さ (時間): 1 年 (365 日). */
+private const val RANGE_HOURS_YEAR_1 = 365L * 24L
 
 /** 測定値のない時間が, この数 (区切りの数) を超えたら, 線を切る (機器が止まっていた間をつながない). */
 private const val MAX_GAP_BUCKETS = 2L
@@ -49,6 +60,15 @@ enum class ChartRange(
 
     /** 直近の 24 時間. */
     HOUR_24(RANGE_HOURS_24),
+
+    /** 直近の 7 日. */
+    DAY_7(RANGE_HOURS_DAY_7),
+
+    /** 直近の 30 日. */
+    DAY_30(RANGE_HOURS_DAY_30),
+
+    /** 直近の 1 年. */
+    YEAR_1(RANGE_HOURS_YEAR_1),
     ;
 
     /** 範囲の長さ (秒). */
@@ -64,6 +84,31 @@ enum class ChartRange(
      * @return 窓
      */
     fun window(nowTs: Long): ChartWindow = ChartWindow(nowTs - seconds, nowTs, bucketSeconds)
+}
+
+/**
+ * 日付で選んだ範囲の窓を作る (開始の日の 0 時から, 終了の日の終わりまで).
+ *
+ * 開始の日が終了の日より後のときは, 入れ替える. 終了が現在より先のとき (終了の日が今日など) は, 現在までにする.
+ *
+ * @param fromDate 開始の日
+ * @param toDate 終了の日
+ * @param zone 日付のタイムゾーン
+ * @param nowTs 現在の時刻 (UNIX 時刻 (s))
+ * @return 窓 (区切りの長さは, 範囲の長さを, 線の点の数で割った値. 1 秒以上)
+ */
+fun customWindow(
+    fromDate: LocalDate,
+    toDate: LocalDate,
+    zone: ZoneId,
+    nowTs: Long,
+): ChartWindow {
+    val first = if (fromDate.isAfter(toDate)) toDate else fromDate
+    val last = if (fromDate.isAfter(toDate)) fromDate else toDate
+    val fromTs = first.atStartOfDay(zone).toEpochSecond()
+    val endTs = last.plusDays(1).atStartOfDay(zone).toEpochSecond() - 1
+    val toTs = maxOf(minOf(endTs, nowTs), fromTs)
+    return ChartWindow(fromTs, toTs, maxOf((toTs - fromTs) / CHART_POINTS, 1L))
 }
 
 /**
@@ -152,13 +197,14 @@ private class Bucket {
 /**
  * 測定値から, グラフの 1 本の線を作る.
  *
- * 窓の中の測定値を, 区切りごとに平均して, 点にする. 測定値のない区切りが [MAX_GAP_BUCKETS] を
- * 超えて続いたら, そこで線を切る. 縦軸の範囲は, 値の最小と最大に余白を足したもので, 幅が
+ * 窓の中の測定値を, 区切りごとに平均して, 点にする. 測定値のない時間が [MAX_GAP_BUCKETS] 区切りと
+ * [holdSeconds] の, 長い方を超えて続いたら, そこで線を切る. 縦軸の範囲は, 値の最小と最大に余白を足したもので, 幅が
  * [minSpan] より小さいときは, [minSpan] まで広げる (わずかな変化が, 大きく見えないように).
  *
  * @param readings 測定値 (順序は, 問わない)
  * @param window 横軸の窓
  * @param minSpan 縦軸の幅の最小値 (線の値と, 同じ単位)
+ * @param holdSeconds 測定値のない時間が, この長さ (s) までなら, 線をつなぐ (保存の間隔が長いとき用)
  * @param value 測定値から, グラフにする値を取り出す関数 (ないときは, null. その測定値は, 除く)
  * @return 線. 窓の中に, 値が 1 つもないときは, null
  */
@@ -166,6 +212,7 @@ fun buildChartSeries(
     readings: List<Reading>,
     window: ChartWindow,
     minSpan: Double,
+    holdSeconds: Long = 0L,
     value: (Reading) -> Double?,
 ): ChartSeries? {
     val buckets = TreeMap<Long, Bucket>()
@@ -188,8 +235,11 @@ fun buildChartSeries(
     val segments = mutableListOf<MutableList<ChartPoint>>()
     var previous = 0L
     for ((index, bucket) in buckets) {
-        // 前の点との間にある, 測定値のない区切りの数が, 上限を超えたら, 線を切る
-        if (segments.isEmpty() || index - previous - 1 > MAX_GAP_BUCKETS) {
+        // 前の点との間にある, 測定値のない時間が, 上限を超えたら, 線を切る
+        val gapSeconds = (index - previous - 1) * window.bucketSeconds
+        if (segments.isEmpty() ||
+            gapSeconds > maxOf(MAX_GAP_BUCKETS * window.bucketSeconds, holdSeconds)
+        ) {
             segments.add(mutableListOf())
         }
         val center = window.fromTs + index * window.bucketSeconds + window.bucketSeconds / HALF

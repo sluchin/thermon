@@ -6,6 +6,8 @@
 
 package jp.thermon.core
 
+import java.time.LocalDate
+import java.time.ZoneOffset
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -50,6 +52,9 @@ class ChartTest {
         assertEquals(ChartWindow(-11600, 10000, 180), ChartRange.HOUR_6.window(10000))
         assertEquals(ChartWindow(10000 - 86400, 10000, 720), ChartRange.HOUR_24.window(10000))
         assertEquals(3600L, ChartRange.HOUR_1.seconds)
+        assertEquals(7L * 86400L, ChartRange.DAY_7.seconds)
+        assertEquals(30L * 86400L, ChartRange.DAY_30.seconds)
+        assertEquals(365L * 86400L, ChartRange.YEAR_1.seconds)
     }
 
     /** 区切りの長さが 1 未満の窓は, 作れない. */
@@ -114,6 +119,66 @@ class ChartTest {
         assertEquals(2, series.segments.size)
         assertEquals(listOf(1050L, 1150L, 1450L), series.segments[0].map { it.ts })
         assertEquals(listOf(1850L, 1950L), series.segments[1].map { it.ts })
+    }
+
+    /** 保持する時間 (holdSeconds) までの穴は, 区切りの数が多くても, 線をつなぐ. それを超えたら切る. */
+    @Test
+    fun buildHoldsLongerGap() {
+        // 区切りの番号: 0, 4 (3 つ空き: 300 s), 9 (4 つ空き: 400 s). 保持 450 s なら全部つなぎ, 350 s なら 2 つ目の穴で切る
+        val readings = listOf(1050L, 1450L, 1950L).map { reading(it, it.toDouble()) }
+
+        val held = assertNotNull(buildChartSeries(readings, WINDOW, 1.0, 450L) { it.temperatureC })
+        val cut = assertNotNull(buildChartSeries(readings, WINDOW, 1.0, 350L) { it.temperatureC })
+
+        assertEquals(
+            listOf(listOf(1050L, 1450L, 1950L)),
+            held.segments.map { s -> s.map { it.ts } },
+        )
+        assertEquals(
+            listOf(listOf(1050L, 1450L), listOf(1950L)),
+            cut.segments.map { s ->
+                s.map { it.ts }
+            },
+        )
+    }
+
+    /** 日付で選んだ窓は, 開始の日の 0 時から, 終了の日の終わりまで. 区切りは, 長さを 120 で割る. */
+    @Test
+    fun customWindowCoversWholeDays() {
+        val zone = ZoneOffset.UTC
+        val from = LocalDate.of(2026, 1, 1)
+        val to = LocalDate.of(2026, 1, 2)
+        val fromTs = from.atStartOfDay(zone).toEpochSecond()
+
+        val window = customWindow(from, to, zone, fromTs + 10L * 86400L)
+
+        assertEquals(
+            ChartWindow(fromTs, fromTs + 2L * 86400L - 1L, (2L * 86400L - 1L) / 120L),
+            window,
+        )
+    }
+
+    /** 終了が現在より先なら現在まで. 開始と終了が逆なら入れ替える. 未来の日なら, 幅は最小 (区切り 1 秒). */
+    @Test
+    fun customWindowClampsAndSwaps() {
+        val zone = ZoneOffset.UTC
+        val first = LocalDate.of(2026, 1, 1)
+        val second = LocalDate.of(2026, 1, 3)
+        val fromTs = first.atStartOfDay(zone).toEpochSecond()
+
+        assertEquals(
+            ChartWindow(fromTs, fromTs + 1000L, 8L),
+            customWindow(
+                second,
+                first,
+                zone,
+                fromTs + 1000L,
+            ),
+        )
+        assertEquals(
+            ChartWindow(fromTs, fromTs, 1L),
+            customWindow(first, second, zone, fromTs - 5L),
+        )
     }
 
     /** 縦軸は, 値の幅が十分なら, 上下に 5% の余白を足す. */

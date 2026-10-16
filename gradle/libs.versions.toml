@@ -8,12 +8,14 @@ junit = "6.1.3"
 awsSdk = "1.9.17"
 coroutines = "1.11.0"
 mockk = "1.14.11"
+work = "2.10.1"
 jacoco = "0.8.15"
 
 [libraries]
 # AWS SDK for Kotlin (OkHttp 5.5 が, compileSdk 37 以上を要求する)
 aws-cognitoidentity = { module = "aws.sdk.kotlin:cognitoidentity", version.ref = "awsSdk" }
 aws-dynamodb = { module = "aws.sdk.kotlin:dynamodb", version.ref = "awsSdk" }
+androidx-work = { module = "androidx.work:work-runtime", version.ref = "work" }
 coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }

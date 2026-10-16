@@ -81,6 +81,7 @@ android {
 
 dependencies {
     implementation(project(":core"))
+    implementation(libs.androidx.work)
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.kotlin.test)
     testRuntimeOnly(libs.junit.launcher)

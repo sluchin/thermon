@@ -7,6 +7,7 @@
 package jp.thermon.core
 
 import kotlinx.coroutines.test.runTest
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -19,118 +20,122 @@ private const val NOW = 100000L
 /** 試験の機器の識別子. */
 private const val NODE = "AA:BB:CC:DD:EE:01"
 
-/**
- * 試験用の測定値を取り出す入り口 (取り出しの引数を記録する).
- *
- * @property readings [range] が返す測定値
- * @property latest [latest] が返す測定値
- * @property failure 取り出しで投げる例外 (null なら, 投げない)
- */
-private class FakeRepository(
-    private val readings: List<Reading>,
-    private val latest: Reading?,
-    private val failure: Exception? = null,
-) : ReadingsRepository {
-    /** [range] に渡された引数 (機器, 開始, 終了). */
-    var rangeArgs: Triple<String, Long, Long>? = null
-
-    override suspend fun range(
-        node: String,
-        fromTs: Long,
-        toTs: Long,
-    ): List<Reading> {
-        failure?.let { throw it }
-        rangeArgs = Triple(node, fromTs, toTs)
-        return readings
-    }
-
-    override suspend fun latest(node: String): Reading? = latest
-}
-
-/**
- * 試験用の測定値を作る.
- *
- * @param ts 時刻
- * @param temperature 温度
- * @param humidity 湿度
- * @return 測定値
- */
-private fun reading(
-    ts: Long,
-    temperature: Double,
-    humidity: Double?,
-): Reading = Reading(NODE, ts, null, temperature, humidity, null)
+/** 試験の窓 (直近の 1 時間). */
+private val WINDOW = ChartRange.HOUR_1.window(NOW)
 
 /** [loadSnapshot] の単体テスト. */
 class NodeSnapshotTest {
-    /** 範囲の窓で取り出して, 最新の測定値と, 温度と湿度のグラフを作る. */
+    /** AWS の新しい測定値を保存して, 最新の測定値と, 保存した測定値の温度と湿度のグラフを作る. */
     @Test
-    fun loadSnapshotBuildsLatestAndCharts() =
+    fun loadSnapshotSyncsAndBuildsCharts() =
         runTest {
-            val latest = reading(NOW - 10, 21.0, 50.0)
-            val repository =
-                FakeRepository(listOf(reading(NOW - 100, 20.0, 40.0), latest), latest)
+            val latest = sample(NOW - 10, 21.0, 50.0)
+            val remote = FakeRemote(listOf(sample(NOW - 100, 20.0, 40.0), latest))
+            val store = FakeStore()
 
-            val snapshot = loadSnapshot(repository, NODE, ChartRange.HOUR_1, NOW)
+            val snapshot = loadSnapshot(remote, store, NODE, WINDOW, NOW)
 
-            assertEquals(Triple(NODE, NOW - 3600, NOW), repository.rangeArgs)
+            assertEquals(2, store.items.size)
             assertEquals(NODE, snapshot.node)
             assertEquals(latest, snapshot.latest)
+            assertNull(snapshot.syncError)
             assertEquals(
-                listOf(
-                    20.0,
-                    21.0,
-                ),
-                assertNotNull(snapshot.temperature).segments.flatten().map {
-                    it.value
-                },
+                listOf(20.0, 21.0),
+                assertNotNull(snapshot.temperature).segments.flatten().map { it.value },
             )
             assertEquals(
-                listOf(
-                    40.0,
-                    50.0,
-                ),
-                assertNotNull(snapshot.humidity).segments.flatten().map {
-                    it.value
-                },
+                listOf(40.0, 50.0),
+                assertNotNull(snapshot.humidity).segments.flatten().map { it.value },
             )
+        }
+
+    /** 窓の外の保存した測定値は, グラフに入れない. 窓の中が空なら, どちらのグラフも作らない. */
+    @Test
+    fun loadSnapshotOnlyUsesWindow() =
+        runTest {
+            val store = FakeStore(mutableListOf(sample(NOW - 7200, 20.0)))
+
+            val snapshot = loadSnapshot(FakeRemote(emptyList()), store, NODE, WINDOW, NOW)
+
+            assertEquals(NOW - 7200, snapshot.latest?.ts)
+            assertNull(snapshot.temperature)
+            assertNull(snapshot.humidity)
         }
 
     /** 湿度を測れない機器 (湿度が null) は, 湿度のグラフを作らない. */
     @Test
     fun loadSnapshotWithoutHumidity() =
         runTest {
-            val repository = FakeRepository(listOf(reading(NOW - 100, 20.0, null)), null)
+            val remote = FakeRemote(listOf(sample(NOW - 100, 20.0, null)))
 
-            val snapshot = loadSnapshot(repository, NODE, ChartRange.HOUR_6, NOW)
+            val snapshot = loadSnapshot(remote, FakeStore(), NODE, WINDOW, NOW)
 
-            assertNull(snapshot.latest)
             assertNotNull(snapshot.temperature)
             assertNull(snapshot.humidity)
         }
 
-    /** 範囲の中に測定値がなければ, どちらのグラフも作らない. */
+    /** 保存の間隔 (1 時間) より短い 2 時間までの穴は, 線をつなぐ. */
     @Test
-    fun loadSnapshotWithoutData() =
+    fun loadSnapshotConnectsHourlyPoints() =
         runTest {
-            val snapshot =
-                loadSnapshot(FakeRepository(emptyList(), null), NODE, ChartRange.HOUR_24, NOW)
+            val window = ChartRange.HOUR_24.window(NOW)
+            val remote = FakeRemote(emptyList())
+            val store = FakeStore(mutableListOf(sample(NOW - 7200, 20.0), sample(NOW - 3600, 21.0)))
 
-            assertNull(snapshot.temperature)
-            assertNull(snapshot.humidity)
+            val snapshot = loadSnapshot(remote, store, NODE, window, NOW)
+
+            assertEquals(1, assertNotNull(snapshot.temperature).segments.size)
         }
 
-    /** 取り出しに失敗したら, 例外をそのまま伝える. */
+    /** AWS から取り出せなくても, 保存した測定値があれば, それを表示して, エラーのメッセージを付ける. */
     @Test
-    fun loadSnapshotPropagatesFailure() =
+    fun loadSnapshotFallsBackToStore() =
         runTest {
-            val repository = FakeRepository(emptyList(), null, IllegalStateException("boom"))
+            val remote = FakeRemote(emptyList(), IllegalStateException("offline"))
+            val store = FakeStore(mutableListOf(sample(NOW - 100, 20.0)))
+
+            val snapshot = loadSnapshot(remote, store, NODE, WINDOW, NOW)
+
+            assertEquals("offline", snapshot.syncError)
+            assertEquals(NOW - 100, snapshot.latest?.ts)
+            assertNotNull(snapshot.temperature)
+        }
+
+    /** メッセージのない例外は, 例外の文字列をエラーのメッセージにする. */
+    @Test
+    fun loadSnapshotErrorWithoutMessage() =
+        runTest {
+            val remote = FakeRemote(emptyList(), IllegalStateException())
+            val store = FakeStore(mutableListOf(sample(NOW - 100, 20.0)))
+
+            val snapshot = loadSnapshot(remote, store, NODE, WINDOW, NOW)
+
+            assertEquals("java.lang.IllegalStateException", snapshot.syncError)
+        }
+
+    /** AWS から取り出せず, 保存した測定値もなければ, 失敗をそのまま伝える. */
+    @Test
+    fun loadSnapshotPropagatesFailureWithoutStore() =
+        runTest {
+            val remote = FakeRemote(emptyList(), IllegalStateException("boom"))
 
             val error =
                 assertFailsWith<IllegalStateException> {
-                    loadSnapshot(repository, NODE, ChartRange.HOUR_1, NOW)
+                    loadSnapshot(remote, FakeStore(), NODE, WINDOW, NOW)
                 }
 
             assertEquals("boom", error.message)
+        }
+
+    /** 止められた (キャンセルされた) ときは, 保存した測定値があっても, そのまま伝える. */
+    @Test
+    fun loadSnapshotPropagatesCancellation() =
+        runTest {
+            val remote = FakeRemote(emptyList(), CancellationException("cancelled"))
+            val store = FakeStore(mutableListOf(sample(NOW - 100, 20.0)))
+
+            assertFailsWith<CancellationException> {
+                loadSnapshot(remote, store, NODE, WINDOW, NOW)
+            }
         }
 }

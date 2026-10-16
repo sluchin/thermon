@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- AWS (Cognito と DynamoDB) に接続する -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 室外の温度と湿度の通知 (Android 13 以降は, 実行のときに許可を求める) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="false"

@@ -6,19 +6,21 @@
 
 package jp.thermon.app
 
+import android.Manifest
 import android.app.Activity
 import android.os.Build
 import android.os.Bundle
 import android.util.TypedValue
-import android.view.ViewGroup
 import android.view.WindowInsets
-import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import jp.thermon.core.ChartRange
+import jp.thermon.core.ChartWindow
 import jp.thermon.core.NodeSnapshot
+import jp.thermon.core.ReadingStore
 import jp.thermon.core.ReadingsRepository
+import jp.thermon.core.customWindow
 import jp.thermon.core.loadSnapshot
 import jp.thermon.core.parseNodes
 import kotlinx.coroutines.CoroutineScope
@@ -28,6 +30,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import java.time.ZoneId
 
 /** 画面の端と, 内容の間の余白 (dp). */
@@ -48,9 +51,11 @@ class MainActivity : Activity() {
     private lateinit var root: ScrollView
     private var panel: ChartsPanel? = null
     private var nodes: List<String> = emptyList()
-    private var buttons: Map<ChartRange, Button> = emptyMap()
+    private var rangeBar: RangeBar? = null
     private var repository: ReadingsRepository? = null
-    private var range = ChartRange.HOUR_6
+    private var store: ReadingStore? = null
+    private var preset: ChartRange? = ChartRange.HOUR_6
+    private var dates: Pair<LocalDate, LocalDate>? = null
     private var loadJob: Job? = null
 
     /**
@@ -69,60 +74,69 @@ class MainActivity : Activity() {
         applySystemBarInsets()
         setContentView(root)
 
+        requestNotificationPermission()
         val specs = parseNodes(BuildConfig.NODES)
         if (BuildConfig.IDENTITY_POOL_ID.isEmpty() || specs.isEmpty()) {
             content.addView(TextView(this).apply { text = getString(R.string.not_configured) })
             return
         }
-        content.addView(createRangeBar())
+        content.addView(createRangeBar().container)
         nodes = specs.map { it.node }
         panel = ChartsPanel(this, specs).also { content.addView(it.container) }
         repository = AwsClients.readings()
+        store = SqliteReadingStore.get(this)
+        OutdoorAlertWorker.schedule(this)
         reload()
     }
 
-    /**
-     * 範囲を選ぶボタン (1 時間, 6 時間, 24 時間) を並べた行を作る.
-     *
-     * @return ボタンの行
-     */
-    private fun createRangeBar(): LinearLayout {
-        val labels =
-            mapOf(
-                ChartRange.HOUR_1 to R.string.range_1h,
-                ChartRange.HOUR_6 to R.string.range_6h,
-                ChartRange.HOUR_24 to R.string.range_24h,
-            )
-        val bar = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        buttons =
-            labels.mapValues { (chartRange, labelId) ->
-                Button(this).apply {
-                    text = getString(labelId)
-                    setOnClickListener { selectRange(chartRange) }
-                    bar.addView(
-                        this,
-                        LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f),
-                    )
-                }
-            }
-        updateButtons()
-        return bar
+    /** 室外の通知のために, 通知の許可を求める (Android 13 以降. 許可済みなら, 何も出ない). */
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 0)
+        }
     }
 
     /**
-     * 範囲を選んで, 測定値を取り出し直す.
+     * 範囲を選ぶ部品 (近道のボタンと, 開始と終了の日付) を作る.
      *
-     * @param selected 選んだ範囲
+     * @return 範囲を選ぶ部品
      */
-    private fun selectRange(selected: ChartRange) {
-        range = selected
-        updateButtons()
-        reload()
-    }
+    private fun createRangeBar(): RangeBar =
+        RangeBar(
+            this,
+            ZoneId.systemDefault(),
+            onPreset = { selected ->
+                preset = selected
+                dates = null
+                reload()
+            },
+            onDates = { from, to ->
+                preset = null
+                dates = from to to
+                reload()
+            },
+        ).also { rangeBar = it }
 
-    /** 選んでいる範囲のボタンを, 押せなくする (どれを選んでいるかが, 分かる). */
-    private fun updateButtons() {
-        buttons.forEach { (chartRange, button) -> button.isEnabled = chartRange != range }
+    /**
+     * 選んでいる範囲の窓を作る (近道なら, 現在までの範囲. 日付なら, その日の 0 時から).
+     *
+     * @param nowTs 現在の時刻 (UNIX 時刻 (s))
+     * @return 窓
+     */
+    private fun currentWindow(nowTs: Long): ChartWindow {
+        val range = preset
+        val picked = dates
+        return when {
+            range != null -> range.window(nowTs)
+            picked != null ->
+                customWindow(
+                    picked.first,
+                    picked.second,
+                    ZoneId.systemDefault(),
+                    nowTs,
+                )
+            else -> ChartRange.HOUR_6.window(nowTs)
+        }
     }
 
     /**
@@ -132,23 +146,28 @@ class MainActivity : Activity() {
      * 機器が 1 台取り出せるたびに, 表示を更新する.
      */
     private fun reload() {
-        val source = repository ?: return
-        val view = panel ?: return
-        val selected = range
-        loadJob?.cancel()
-        view.showLoading()
-        loadJob =
-            scope.launch {
-                val nowTs = System.currentTimeMillis() / MILLIS_PER_SECOND
-                val loaded = mutableMapOf<String, Result<NodeSnapshot>>()
-                for (node in nodes) {
-                    loaded[node] = runCatching { loadSnapshot(source, node, selected, nowTs) }
-                    // 範囲を選び直して, 止められたときは, 古い結果を表示しない
-                    ensureActive()
-                    val shown = loaded.toMap()
-                    runOnUiThread { view.show(shown, ZoneId.systemDefault()) }
+        val source = repository
+        val saved = store
+        val view = panel
+        if (source != null && saved != null && view != null) {
+            val nowTs = System.currentTimeMillis() / MILLIS_PER_SECOND
+            val window = currentWindow(nowTs)
+            rangeBar?.show(preset, window)
+            loadJob?.cancel()
+            view.showLoading()
+            loadJob =
+                scope.launch {
+                    val loaded = mutableMapOf<String, Result<NodeSnapshot>>()
+                    for (node in nodes) {
+                        loaded[node] =
+                            runCatching { loadSnapshot(source, saved, node, window, nowTs) }
+                        // 範囲を選び直して, 止められたときは, 古い結果を表示しない
+                        ensureActive()
+                        val shown = loaded.toMap()
+                        runOnUiThread { view.show(shown, ZoneId.systemDefault()) }
+                    }
                 }
-            }
+        }
     }
 
     /**

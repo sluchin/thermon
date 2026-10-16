@@ -128,7 +128,13 @@ class ChartsPanel(
                     snapshot.latest?.let { formatReading(it, zone) }
                         ?: context.getString(R.string.no_data, spec.node)
             }
-        return spec.label?.let { "$it  $body" } ?: body
+        val warning =
+            snapshot
+                ?.syncError
+                ?.let {
+                    "  " + context.getString(R.string.sync_error, it)
+                }.orEmpty()
+        return (spec.label?.let { "$it  $body" } ?: body) + warning
     }
 
     /**
