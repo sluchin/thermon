@@ -14,6 +14,9 @@ private const val TEMPERATURE_MIN_SPAN = 1.0
 /** 湿度のグラフの縦軸の幅の最小値 (%). */
 private const val HUMIDITY_MIN_SPAN = 5.0
 
+/** 測定値のない時間が, この長さ (s) までなら, 線をつなぐ (保存の間隔 (1 時間) の 2 倍). */
+private const val HOLD_SECONDS = HEARTBEAT_SECONDS * 2L
+
 /**
  * 1 台の機器の, 画面に表示する内容 (最新の測定値と, 温度と湿度のグラフ).
  *
@@ -61,7 +64,14 @@ suspend fun loadSnapshot(
     if (failure != null && latest == null) {
         throw failure
     }
-    val readings = store.range(node, window.fromTs, window.toTs)
+    val readings =
+        withHeldEnds(
+            store.range(node, window.fromTs, window.toTs),
+            store.range(node, window.fromTs - HOLD_SECONDS, window.fromTs - 1L).lastOrNull(),
+            latest,
+            window,
+            HOLD_SECONDS,
+        )
     return NodeSnapshot(
         node = node,
         latest = latest,
@@ -70,17 +80,52 @@ suspend fun loadSnapshot(
                 readings,
                 window,
                 TEMPERATURE_MIN_SPAN,
-                HEARTBEAT_SECONDS * 2L,
+                HOLD_SECONDS,
             ) { it.temperatureC },
         humidity =
             buildChartSeries(
                 readings,
                 window,
                 HUMIDITY_MIN_SPAN,
-                HEARTBEAT_SECONDS * 2L,
+                HOLD_SECONDS,
             ) {
                 it.humidity
             },
         syncError = failure?.let { it.message ?: it.toString() },
     )
+}
+
+/**
+ * 窓の中の保存した測定値に, 窓の左端と, 最新の測定値を足す (線を, 窓の端と, 今まで届かせる).
+ *
+ * 端末には, 値が変わったときと, 1 時間ごとにしか保存しない. そのため, 値が変わらない間は, 窓の中に点が
+ * ほとんどなく, 線が窓の左端にも, 最新の時刻にも届かない.
+ *
+ * - 左端: 窓の前に保存した最後の測定値 [before] から, 次の測定値までが [holdSeconds] 以内 (線が, つながる)
+ *   なら, その値を, 窓の左端の時刻に置く.
+ * - 右端: 最新の測定値 [latest] が, 窓の中にあり, 保存した最後の測定値より新しいなら, 足す (保存しなかった
+ *   測定値は, 前に保存した値と同じなので, その時刻まで, 同じ値が続いている).
+ *
+ * @param readings 窓の中の保存した測定値 (古い順)
+ * @param before 窓の前に保存した, 最後の測定値 (ないときは, null)
+ * @param latest 最新の測定値 (ないときは, null)
+ * @param window 横軸の窓
+ * @param holdSeconds 測定値のない時間が, この長さ (s) までなら, 線をつなぐ
+ * @return 端を足した測定値 (古い順)
+ */
+fun withHeldEnds(
+    readings: List<Reading>,
+    before: Reading?,
+    latest: Reading?,
+    window: ChartWindow,
+    holdSeconds: Long,
+): List<Reading> {
+    val lastTs = readings.lastOrNull()?.ts ?: before?.ts ?: Long.MIN_VALUE
+    val tail = latest?.takeIf { it.ts > lastTs && it.ts in window.fromTs..window.toTs }
+    val next = readings.firstOrNull() ?: tail
+    val head =
+        before
+            ?.takeIf { next != null && next.ts - it.ts <= holdSeconds }
+            ?.copy(ts = window.fromTs)
+    return listOfNotNull(head) + readings + listOfNotNull(tail)
 }

@@ -87,6 +87,83 @@ class NodeSnapshotTest {
             assertEquals(1, assertNotNull(snapshot.temperature).segments.size)
         }
 
+    /**
+     * 値が変わらない間 (窓の中に保存した点が 1 つだけ) も, 窓の前に保存した値から, 窓の左端と, 最新の
+     * 測定値まで, 線を引く (室外の温度が, 1 時間, 変わらないとき).
+     */
+    @Test
+    fun loadSnapshotHoldsValueToBothEnds() =
+        runTest {
+            val stored = sample(NOW - 400, 13.8, 45.0)
+            // 保存した最後の測定値のあとに, 同じ値の測定値が届いている (変わらないので, 保存しない)
+            val remote = FakeRemote(listOf(sample(NOW - 10, 13.8, 45.0)))
+            val store = FakeStore(mutableListOf(sample(NOW - 4000, 13.8, 46.0), stored))
+
+            val snapshot = loadSnapshot(remote, store, NODE, WINDOW, NOW)
+
+            val points = assertNotNull(snapshot.humidity).segments
+            assertEquals(1, points.size)
+            assertEquals(listOf(46.0, 45.0, 45.0), points.flatten().map { it.value })
+            assertEquals(3, assertNotNull(snapshot.temperature).segments.flatten().size)
+        }
+
+    /** 窓の前の値は, 次の測定値まで, 線がつながるときだけ, 窓の左端に置く. */
+    @Test
+    fun withHeldEndsAddsHeadOnlyWhenConnected() {
+        val window = ChartWindow(1000, 5000, 60)
+        val before = sample(900, 20.0)
+        val inside = listOf(sample(2000, 21.0))
+
+        assertEquals(
+            listOf(1000L, 2000L),
+            withHeldEnds(inside, before, null, window, 1500).map { it.ts },
+        )
+        assertEquals(20.0, withHeldEnds(inside, before, null, window, 1500).first().temperatureC)
+        // 次の測定値まで, 長すぎる (機器が止まっていた)
+        assertEquals(listOf(2000L), withHeldEnds(inside, before, null, window, 1000).map { it.ts })
+        // 窓の前の値がない
+        assertEquals(listOf(2000L), withHeldEnds(inside, null, null, window, 1500).map { it.ts })
+        // 次の測定値が, 1 つもない
+        assertEquals(emptyList(), withHeldEnds(emptyList(), before, null, window, 1500))
+    }
+
+    /** 最新の測定値は, 窓の中で, 保存した最後の測定値より新しいときだけ, 足す. */
+    @Test
+    fun withHeldEndsAddsTailOnlyWhenNewerInWindow() {
+        val window = ChartWindow(1000, 5000, 60)
+        val inside = listOf(sample(2000, 21.0))
+
+        assertEquals(
+            listOf(2000L, 4000L),
+            withHeldEnds(inside, null, sample(4000, 21.0), window, 1500).map { it.ts },
+        )
+        // 保存した最後の測定値と同じ (すでに, 線にある)
+        assertEquals(
+            listOf(2000L),
+            withHeldEnds(inside, null, sample(2000, 21.0), window, 1500).map { it.ts },
+        )
+        // 窓の後ろ (日付で選んだ, 過去の窓) と, 窓の前
+        assertEquals(
+            listOf(2000L),
+            withHeldEnds(inside, null, sample(6000, 21.0), window, 1500).map { it.ts },
+        )
+        assertEquals(
+            emptyList(),
+            withHeldEnds(emptyList(), null, sample(500, 21.0), window, 1500),
+        )
+        // 窓の中に保存した点がなくても, 窓の前の値と, 最新の測定値で, 線を引く
+        assertEquals(
+            listOf(1000L, 1800L),
+            withHeldEnds(emptyList(), sample(900, 20.0), sample(1800, 20.0), window, 1500)
+                .map { it.ts },
+        )
+        // 窓の前の値と, 最新の測定値が同じ (新しい測定値はない)
+        assertEquals(
+            emptyList(),
+            withHeldEnds(emptyList(), sample(900, 20.0), sample(900, 20.0), window, 1500),
+        )
+    }
+
     /** AWS から取り出せなくても, 保存した測定値があれば, それを表示して, エラーのメッセージを付ける. */
     @Test
     fun loadSnapshotFallsBackToStore() =
