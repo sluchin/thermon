@@ -89,8 +89,7 @@ ktlint (Kotlin 公式のスタイル) と、detekt (既定の規則) に従う�
 
 ## 開発フロー
 
-1. 機能開発は `ccr-*` ブランチで行う。
-2. Push 時に GitHub Actions (`.github/workflows/build.yml`) が開発用の Docker イメージ (ローカルと同じ環境) で `docker compose` のサービスを実行する (`SETUP.md` の「CI (GitHub Actions)」)。
+1. Push 時に GitHub Actions (`.github/workflows/build.yml`) が開発用の Docker イメージ (ローカルと同じ環境) で `docker compose` のサービスを実行する (`SETUP.md` の「CI (GitHub Actions)」)。
    - `check` ジョブ: `build` / `test` / `coverage` / `format` / `analyze` をサービスごとに実行する。失敗したら、ジョブが失敗する。実行のログをアーティファクト (`<サービス名>_log`。`build_log` など) として保存する (失敗したときも保存する)。**APK はアーティファクトに置かない。**
    - `docs` ジョブ: `docs` (Dokka の HTML。警告があれば失敗する)。生成したドキュメントをアーティファクト `docs` と、ログ `docs_log` に保存する。
    - `deploy-docs` ジョブ: main への push のときだけ、ドキュメントを GitHub Pages に公開する (リポジトリの Settings > Pages > Source を「GitHub Actions」にしておく)。
