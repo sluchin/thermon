@@ -63,6 +63,13 @@ scripts/cloud-docker.sh start          # Docker のデーモンを起動する (
 - **アクセスキーをアプリや、リポジトリに入れない。** 必ずCognito の一時的な認証情報を使う。署名の鍵 (`*.jks`、`*.keystore`) も、コミットしない。
 - 未認証ロールの権限はそのテーブルの `dynamodb:Query` だけ。書き込み、削除、ほかのサービスの権限を前提にしたコードを書かない。
 
+## ログ
+
+- ログは `AppLog` (`AppLog.kt`) だけを使う (`android.util.Log` を直接呼ばない)。タグは、ファイルごとの `private const val TAG` (機能の名前)。
+- `AppLog.d` はデバッグ版だけ出す (判定は、関数の中の `BuildConfig.DEBUG`。引数は、文字列を返す関数にして、リリース版では文字列も作らない)。`AppLog.i` (最低限の情報)、`AppLog.w` (失敗したが続けられる)、`AppLog.e` (利用者の操作が失敗した) は、リリース版でも出す。
+- AWS の認証情報と、鍵は、どのレベルでも書かない。ログの文字は英語。
+- 落ちたときの例外は、Android が logcat に出し、Google Play では Play Console の Android Vitals が集める (コードは要らない)。見方は `SETUP.md` の「ログを見る」。
+
 ## コーディング規約
 
 ktlint (Kotlin 公式のスタイル) と、detekt (既定の規則) に従う。迷ったら、ツールが正しい。Kotlin 公式のコーディング規約へのリンクは `CODING_STYLE.md`。

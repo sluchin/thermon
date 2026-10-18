@@ -33,6 +33,9 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
 
+/** ログのタグ. */
+private const val TAG = "Readings"
+
 /** 画面の端と, 内容の間の余白 (dp). */
 private const val CONTENT_PADDING_DP = 16
 
@@ -161,6 +164,14 @@ class MainActivity : Activity() {
                     for (node in nodes) {
                         loaded[node] =
                             runCatching { loadSnapshot(source, saved, node, window, nowTs) }
+                                .onSuccess { AppLog.d(TAG) { "Loaded the readings of $node" } }
+                                .onFailure {
+                                    AppLog.w(
+                                        TAG,
+                                        "Could not load the readings of $node",
+                                        it,
+                                    )
+                                }
                         // 範囲を選び直して, 止められたときは, 古い結果を表示しない
                         ensureActive()
                         val shown = loaded.toMap()

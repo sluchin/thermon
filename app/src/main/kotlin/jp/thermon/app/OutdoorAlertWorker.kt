@@ -30,6 +30,9 @@ import jp.thermon.core.syncReadings
 import kotlinx.coroutines.runBlocking
 import java.util.concurrent.TimeUnit
 
+/** ログのタグ. */
+private const val TAG = "Alert"
+
 /** 定期の確認の名前. */
 private const val WORK_NAME = "outdoor_alert"
 
@@ -73,12 +76,15 @@ class OutdoorAlertWorker(
             val notified = prefs.getStringSet(KEY_NOTIFIED, emptySet()).orEmpty()
             val fresh =
                 newAlerts(current, OutdoorAlert.entries.filter { it.name in notified }.toSet())
+            AppLog.d(TAG) { "Outdoor alerts: $current" }
             if (fresh.isNotEmpty()) {
+                AppLog.i(TAG, "Notifying the new outdoor alerts: $fresh")
                 notify(applicationContext, fresh, reading)
             }
             prefs.edit().putStringSet(KEY_NOTIFIED, current.map { it.name }.toSet()).apply()
         }
         saveReadings(specs.map { it.node })
+        AppLog.i(TAG, "Saved the readings of ${specs.size} nodes")
         return Result.success()
     }
 

@@ -448,3 +448,19 @@ scripts/cloud-docker.sh run build  # docker compose run --rm build (test, covera
 - **画面の作り方**: 通常のビュー (View) と、Canvas で描くカスタム View (`LineChartView`) にしました (ライブラリを増やさないため)。Jetpack Compose は使っていません。
 - **アプリの ID (`applicationId`) と、リリースの署名**。
 - **整形と静的解析の規則の詳細**: 今は ktlint と detekt の既定の規則に最小の設定 (`.editorconfig`、`config/detekt/detekt.yml`) だけです。Kotlin の公式のコーディング規約は [CODING_STYLE.md](CODING_STYLE.md) にリンクだけ書きました。このリポジトリ独自の規約はこれからまとめます。
+
+
+## ログを見る
+
+アプリのログは、Android の logcat に出ます (`app/src/main/kotlin/jp/thermon/app/AppLog.kt`)。タグは機能ごとです (`Readings`、`Alert`)。
+
+```bash
+# エミュレータ (Docker) のログを、タグで絞って見る (D はデバッグ以上)
+docker compose exec emulator adb logcat -s Readings:D Alert:D AndroidRuntime:E
+# 実機 (USB でつなぐ) なら
+adb logcat -s Readings:D Alert:D AndroidRuntime:E
+```
+
+- デバッグのログ (`AppLog.d`) は、デバッグ版 (`assembleDebug`) だけで出ます。リリース版では、情報 (`AppLog.i`)、警告 (`AppLog.w`)、エラー (`AppLog.e`) だけが出ます。
+- アプリが落ちたときの例外は、`AndroidRuntime` のタグで出ます。
+- Google Play で公開したら、落ちたときの例外と ANR (応答なし) は、Play Console の「Android Vitals」に集まります (アプリのコードは要りません。利用者が、使用状況と診断情報の送信を許可している端末から、集まります)。リリース版で R8 の難読化を有効にしたら、Play Console に、対応表 (`mapping.txt`) を上げると、例外の場所が読めます。
