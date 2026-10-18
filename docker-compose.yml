@@ -27,7 +27,7 @@ services:
     tty: true
     command: /bin/bash
 
-  # デバッグ用の APK をビルドする (app/build/outputs/apk/debug/app-debug.apk). Kotlin の警告が出たら失敗する
+  # デバッグ用の APK をビルドする (app/build/outputs/apk/debug/thermon-<版>-debug.apk). Kotlin の警告が出たら失敗する
   build:
     <<: *common
     command: ./gradlew --no-daemon :app:assembleDebug
@@ -69,7 +69,7 @@ services:
 
   # Android エミュレータ (KVM で動かす). 画面はブラウザ (http://localhost:6080/vnc.html) で見る.
   # 起動: docker compose up emulator / 起動し終わるまで待つ: docker compose exec emulator scripts/emulator-wait.sh
-  # APK を入れる: docker compose exec emulator adb install -r app/build/outputs/apk/debug/app-debug.apk
+  # APK を入れる: docker compose exec emulator adb install -r app/build/outputs/apk/debug/thermon-*-debug.apk
   emulator:
     <<: *common
     build:

@@ -152,7 +152,7 @@ Gradle のキャッシュ (依存関係のダウンロード) も消すときは
 ```
 
 - `--continue`: 途中のタスクが失敗しても、残りのタスクを実行して、全ての指摘を一度に見られます。
-- 生成物: APK は `app/build/outputs/apk/debug/app-debug.apk` (検証したサンプルは AWS SDK を含めて、約 4.2 MB)。テストのレポートは `core/build/reports/tests/test/index.html` と `app/build/reports/tests/testDebugUnitTest/index.html`。カバレッジは `core/build/reports/jacoco/test/`。detekt、ktlint、Android Lint のレポートは各モジュールの `build/reports/`。ドキュメントは `core/build/dokka/html/index.html`。
+- 生成物: APK は `app/build/outputs/apk/debug/thermon-<版>-debug.apk` (検証したサンプルは AWS SDK を含めて、約 4.2 MB)。テストのレポートは `core/build/reports/tests/test/index.html` と `app/build/reports/tests/testDebugUnitTest/index.html`。カバレッジは `core/build/reports/jacoco/test/`。detekt、ktlint、Android Lint のレポートは各モジュールの `build/reports/`。ドキュメントは `core/build/dokka/html/index.html`。
 
 ### 整形と静的解析の動き (検証済み)
 
@@ -249,7 +249,7 @@ docker compose up -d emulator
 docker compose exec emulator scripts/emulator-wait.sh
 
 # APK を入れて, アプリを起動する (先に docker compose run --rm build で, APK を作っておく)
-docker compose exec emulator adb install -r app/build/outputs/apk/debug/app-debug.apk
+docker compose exec emulator adb install -r app/build/outputs/apk/debug/thermon-*-debug.apk
 docker compose exec emulator adb shell am start -n jp.thermon.app/.MainActivity
 
 # 画面を, 画像にする (build/emulator-screen.png)
@@ -299,7 +299,7 @@ adb はホストで実行します (Docker に USB を渡す設定を避ける�
 4. APK をインストールします。
 
    ```bash
-   adb install -r app/build/outputs/apk/debug/app-debug.apk
+   adb install -r app/build/outputs/apk/debug/thermon-*-debug.apk
    ```
 
 5. ログを見るときは `adb logcat` を使います (`adb logcat -s <タグ>` で絞れます)。
@@ -339,12 +339,12 @@ AWS の準備 ([AWS_DYNAMODB.md](AWS_DYNAMODB.md)) が終わったあとの手�
    docker compose run --rm build
    ```
 
-   APK は `app/build/outputs/apk/debug/app-debug.apk` にできます。
+   APK は `app/build/outputs/apk/debug/thermon-<版>-debug.apk` にできます。
 
 4. **端末に入れる** (前の節の手順で、USB デバッグを有効にして、接続しておく)
 
    ```bash
-   adb install -r app/build/outputs/apk/debug/app-debug.apk
+   adb install -r app/build/outputs/apk/debug/thermon-*-debug.apk
    ```
 
 5. **アプリを開く**

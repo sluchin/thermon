@@ -78,7 +78,7 @@ docker compose build
 docker compose run --rm build
 ```
 
-デバッグ用の APK が `app/build/outputs/apk/debug/app-debug.apk` にできます。初回は依存関係のダウンロードで、数分かかります (Gradle のキャッシュは Docker のボリュームに残るので、2 回目からは速くなります)。
+デバッグ用の APK が `app/build/outputs/apk/debug/thermon-<版>-debug.apk` にできます。初回は依存関係のダウンロードで、数分かかります (Gradle のキャッシュは Docker のボリュームに残るので、2 回目からは速くなります)。
 
 ## 設定 (AWS への接続)
 
@@ -99,7 +99,7 @@ thermon.nodes=AA:BB:CC:DD:EE:01=室外,AA:BB:CC:DD:EE:02=室内
 adb はホストで実行します (端末の設定を含む手順は [SETUP.md](SETUP.md) の「実機へのインストール」)。
 
 ```bash
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb install -r app/build/outputs/apk/debug/thermon-*-debug.apk
 ```
 
 インストールしたら、端末のアプリ一覧から **`thermon`** を開きます。AWS の準備のあとに、アプリを動かして確認する手順と、うまくいかないときの確認先は [SETUP.md](SETUP.md) の「アプリを動かして確認する」です。
@@ -113,7 +113,7 @@ export KVM_GID=$(getent group kvm | cut -d: -f3)   # 最初の 1 回 (シェル�
 docker compose build emulator                        # 約 9 分, 約 10.7 GB (最初の 1 回)
 docker compose up -d emulator                        # 起動
 docker compose exec emulator scripts/emulator-wait.sh
-docker compose exec emulator adb install -r app/build/outputs/apk/debug/app-debug.apk
+docker compose exec emulator adb install -r app/build/outputs/apk/debug/thermon-*-debug.apk
 docker compose exec emulator adb shell am start -n jp.thermon.app/.MainActivity
 ```
 

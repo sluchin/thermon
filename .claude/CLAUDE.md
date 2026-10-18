@@ -13,7 +13,7 @@ Kotlin で作る Android アプリ。AWS の DynamoDB に保存された温度�
 - `docker compose run` には必ず `--rm` を付ける (終わったコンテナを残さないため)。
 - `UID` と `GID` をシェルでエクスポートしておく (生成物が root 所有にならないように。`SETUP.md` の「2. ホストのユーザー ID を環境変数にエクスポートする」)。
 - イメージのビルド: `docker compose build` (`Dockerfile` を変えたときも)
-- ビルド (デバッグ APK): `docker compose run --rm build` (`app/build/outputs/apk/debug/app-debug.apk`)
+- ビルド (デバッグ APK): `docker compose run --rm build` (`app/build/outputs/apk/debug/thermon-<版>-debug.apk`)
 - 単体テスト: `docker compose run --rm test`
 - カバレッジ (`core` の行と分岐が 100%): `docker compose run --rm coverage`
 - 整形の確認: `docker compose run --rm format` / 整形して書き換える: `docker compose run --rm format-fix`
@@ -21,10 +21,10 @@ Kotlin で作る Android アプリ。AWS の DynamoDB に保存された温度�
 - ドキュメント (Dokka): `docker compose run --rm docs` (`core/build/dokka/html/index.html`)
 - クリーン: `docker compose run --rm clean` (`build/`、`.gradle/`、`.kotlin/` を消す。Gradle のキャッシュは消さない)
 - 開発シェル: `docker compose run --rm dev`
-- エミュレータ (KVM。`export KVM_GID=$(getent group kvm | cut -d: -f3)` が要る。イメージは約 10.7 GB): `docker compose build emulator` → `docker compose up -d emulator` → `docker compose exec emulator scripts/emulator-wait.sh` → `docker compose exec emulator adb install -r app/build/outputs/apk/debug/app-debug.apk`。画面は <http://localhost:6080/vnc.html>、画像にするときは `adb exec-out screencap -p > build/emulator-screen.png`。止めるのは `docker compose down` (`SETUP.md` の「エミュレータ (Docker)」) (中で `./gradlew ...` を直接実行できる)
+- エミュレータ (KVM。`export KVM_GID=$(getent group kvm | cut -d: -f3)` が要る。イメージは約 10.7 GB): `docker compose build emulator` → `docker compose up -d emulator` → `docker compose exec emulator scripts/emulator-wait.sh` → `docker compose exec emulator adb install -r app/build/outputs/apk/debug/thermon-*-debug.apk`。画面は <http://localhost:6080/vnc.html>、画像にするときは `adb exec-out screencap -p > build/emulator-screen.png`。止めるのは `docker compose down` (`SETUP.md` の「エミュレータ (Docker)」) (中で `./gradlew ...` を直接実行できる)
 
 ### 実機への転送 (ホストの adb)
-- `adb install -r app/build/outputs/apk/debug/app-debug.apk` (ホストに adb を入れる。`SETUP.md` の「実機へのインストール」と「アプリを動かして確認する」)
+- `adb install -r app/build/outputs/apk/debug/thermon-*-debug.apk` (ホストに adb を入れる。`SETUP.md` の「実機へのインストール」と「アプリを動かして確認する」)
 
 ### クラウドのセッション (claude.ai/code) で Docker を使うとき
 
