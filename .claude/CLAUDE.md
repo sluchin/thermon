@@ -72,7 +72,7 @@ scripts/cloud-docker.sh start          # Docker のデーモンを起動する (
 
 ## コーディング規約
 
-ktlint (Kotlin 公式のスタイル) と、detekt (既定の規則) に従う。迷ったら、ツールが正しい。Kotlin 公式のコーディング規約へのリンクは `CODING_STYLE.md`。
+ktlint (Kotlin 公式のスタイル) と、detekt (既定の規則) に従う。迷ったら、ツールが正しい。Kotlin 公式のコーディング規約の日本語訳と、このプロジェクトでの違いは `CODING_STYLE.md`。
 
 - **インデントは空白 4 つ。1 行は 100 桁まで** (`.editorconfig`)。整形は `format-fix` が行う (手で、整形しない)。
 - **ファイルの先頭に著作権とライセンスを書く**:
