@@ -12,6 +12,8 @@
     <string name="range_1y">1 y</string>
     <string name="range_from">From %1$s</string>
     <string name="range_to">To %1$s</string>
+    <string name="range_unset">-</string>
+    <string name="range_clear">Clear</string>
     <string name="sync_error">(offline, showing saved data: %1$s)</string>
     <string name="temperature_title">Temperature</string>
     <string name="humidity_title">Humidity</string>

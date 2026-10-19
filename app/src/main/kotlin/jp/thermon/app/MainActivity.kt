@@ -42,6 +42,9 @@ private const val CONTENT_PADDING_DP = 16
 /** ミリ秒を, 秒にするための値. */
 private const val MILLIS_PER_SECOND = 1000L
 
+/** 起動したときと, 日付を消したときの範囲. */
+private val DEFAULT_RANGE = ChartRange.HOUR_6
+
 /**
  * 温度と湿度の 2 つのグラフに, 機器 (室内, 室外など) を選んで重ねて表示する画面.
  *
@@ -57,7 +60,7 @@ class MainActivity : Activity() {
     private var rangeBar: RangeBar? = null
     private var repository: ReadingsRepository? = null
     private var store: ReadingStore? = null
-    private var preset: ChartRange? = ChartRange.HOUR_6
+    private var preset: ChartRange? = DEFAULT_RANGE
     private var dates: Pair<LocalDate, LocalDate>? = null
     private var loadJob: Job? = null
 
@@ -118,6 +121,11 @@ class MainActivity : Activity() {
                 dates = from to to
                 reload()
             },
+            onClear = {
+                preset = DEFAULT_RANGE
+                dates = null
+                reload()
+            },
         ).also { rangeBar = it }
 
     /**
@@ -138,7 +146,7 @@ class MainActivity : Activity() {
                     ZoneId.systemDefault(),
                     nowTs,
                 )
-            else -> ChartRange.HOUR_6.window(nowTs)
+            else -> DEFAULT_RANGE.window(nowTs)
         }
     }
 
@@ -155,7 +163,7 @@ class MainActivity : Activity() {
         if (source != null && saved != null && view != null) {
             val nowTs = System.currentTimeMillis() / MILLIS_PER_SECOND
             val window = currentWindow(nowTs)
-            rangeBar?.show(preset, window)
+            rangeBar?.show(preset)
             loadJob?.cancel()
             view.showLoading()
             loadJob =
