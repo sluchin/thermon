@@ -28,8 +28,9 @@ private const val MONTH_OFFSET = 1
  * グラフの範囲を選ぶ部品: 近道のボタン (1 h から 1 年) と, 開始と終了の日付を選ぶボタンと, 日付を消すボタン.
  *
  * 日付は, 最初は選んでいない (近道の範囲で表示する). 日付のボタンを押すと, カレンダーで日付を選べる
- * (開始が終了より後になる選び方は, もう一方を同じ日にそろえる). 片方だけを選んだときは, 開始がなければ
- * 終了の日だけ, 終了がなければ今日までにする. 近道のボタンか, 消すボタンを押すと, 日付を選んでいない状態に戻る.
+ * (開始のカレンダーは, 終了の日より後を, 終了のカレンダーは, 開始の日より前を選べない. どちらも, 今日より後は
+ * 選べない). 片方だけを選んだときは, 開始がなければ終了の日だけ, 終了がなければ今日までにする.
+ * 近道のボタンか, 消すボタンを押すと, 日付を選んでいない状態に戻る.
  *
  * @property context コンテキスト
  * @property zone 日付のタイムゾーン
@@ -76,10 +77,10 @@ class RangeBar(
             },
         )
         fromButton.setOnClickListener {
-            pick(fromDate) { from -> select(from, toDate?.let { maxOf(it, from) }) }
+            pick(fromDate, null, toDate) { select(it, toDate) }
         }
         toButton.setOnClickListener {
-            pick(toDate) { to -> select(fromDate?.let { minOf(it, to) }, to) }
+            pick(toDate, fromDate, null) { select(fromDate, it) }
         }
         updateDates()
     }
@@ -135,24 +136,42 @@ class RangeBar(
     }
 
     /**
-     * カレンダーを出して, 日付を選ばせる.
+     * カレンダーを出して, 日付を選ばせる (選べる日は, 最初の日から最後の日までで, 今日より後は選べない).
      *
      * @param selected 選んでいる日 (選んでいないときは, null. カレンダーは, 今日から始める)
+     * @param first 選べる最初の日 (制限しないときは, null)
+     * @param last 選べる最後の日 (null なら, 今日)
      * @param picked 日付を選んだときの処理
      */
     private fun pick(
         selected: LocalDate?,
+        first: LocalDate?,
+        last: LocalDate?,
         picked: (LocalDate) -> Unit,
     ) {
-        val initial = selected ?: LocalDate.now(zone)
+        val today = LocalDate.now(zone)
+        val end = minOf(last ?: today, today)
+        val initial = minOf(selected ?: today, end)
         DatePickerDialog(
             context,
             { _, year, month, day -> picked(LocalDate.of(year, month + MONTH_OFFSET, day)) },
             initial.year,
             initial.monthValue - MONTH_OFFSET,
             initial.dayOfMonth,
-        ).show()
+        ).apply {
+            first?.let { datePicker.minDate = epochMillis(it) }
+            datePicker.maxDate = epochMillis(end)
+        }.show()
     }
+
+    /**
+     * 日の 0 時の時刻を, カレンダーの範囲の指定に使う形にする.
+     *
+     * @param date 日
+     * @return 日の 0 時 (UNIX 時刻 (ms))
+     */
+    private fun epochMillis(date: LocalDate): Long =
+        date.atStartOfDay(zone).toInstant().toEpochMilli()
 
     /**
      * 近道のボタンを作る.
