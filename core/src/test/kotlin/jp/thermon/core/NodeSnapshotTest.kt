@@ -62,6 +62,35 @@ class NodeSnapshotTest {
             assertNull(snapshot.humidity)
         }
 
+    /** 気圧があれば, 気圧のグラフを作る. 気圧のない機器 (SwitchBot など) は, 作らない. */
+    @Test
+    fun loadSnapshotBuildsPressureChart() =
+        runTest {
+            val remote =
+                FakeRemote(
+                    listOf(
+                        sample(NOW - 100, 20.0, pressure = 1013.0),
+                        sample(NOW - 10, 20.0, pressure = 1012.0),
+                    ),
+                )
+
+            val snapshot = loadSnapshot(remote, FakeStore(), NODE, WINDOW, NOW)
+
+            val pressure = assertNotNull(snapshot.pressure)
+            assertEquals(listOf(1013.0, 1012.0), pressure.segments.flatten().map { it.value })
+            // 縦軸は, 変化 (1 hPa) より広い, 最小の幅 (4 hPa) にする
+            assertEquals(4.0, pressure.maxValue - pressure.minValue)
+            assertNull(
+                loadSnapshot(
+                    FakeRemote(listOf(sample(NOW - 10, 20.0))),
+                    FakeStore(),
+                    NODE,
+                    WINDOW,
+                    NOW,
+                ).pressure,
+            )
+        }
+
     /** 湿度を測れない機器 (湿度が null) は, 湿度のグラフを作らない. */
     @Test
     fun loadSnapshotWithoutHumidity() =

@@ -22,9 +22,9 @@ private val CHART_TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("
 private const val TEMPERATURE_SCALE = 10
 
 /**
- * 測定値を, 1 行の表示用の文字列にする (例: AA:BB:CC:DD:EE:01  21.4 C  57.0 %  2026-10-10 14:05:09).
+ * 測定値を, 1 行の表示用の文字列にする (例: AA:BB:CC:DD:EE:01  21.4 C  57.0 %  1013.2 hPa  2026-10-10 14:05:09).
  *
- * 湿度がないときは, 湿度の部分を, 出さない.
+ * 湿度と気圧がないときは, その部分を, 出さない.
  *
  * @param reading 測定値
  * @param zone 時刻を表示するタイムゾーン
@@ -36,8 +36,9 @@ fun formatReading(
 ): String {
     val temperature = formatTemperature((reading.temperatureC * TEMPERATURE_SCALE).roundToInt())
     val humidity = reading.humidity?.let { "  ${"%.1f".format(Locale.ROOT, it)} %" }.orEmpty()
+    val pressure = reading.pressureHpa?.let { "  ${"%.1f".format(Locale.ROOT, it)} hPa" }.orEmpty()
     val time = TIME_FORMAT.format(Instant.ofEpochSecond(reading.ts).atZone(zone))
-    return "${reading.node}  $temperature$humidity  $time"
+    return "${reading.node}  $temperature$humidity$pressure  $time"
 }
 
 /**

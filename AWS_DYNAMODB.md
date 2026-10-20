@@ -1,6 +1,6 @@
 # AWS に届いたデータを DynamoDB に保存して、アプリから読む
 
-AWS IoT Core に届いた温度・湿度・電池残量を DynamoDB に 1 件ずつ保存して、Android アプリ (thermon) から読む手順です。アプリは Cognito の「未認証ロール」で、読み取りだけを許可されます (ログインはありません)。
+AWS IoT Core に届いた温度・湿度・気圧・電池残量を DynamoDB に 1 件ずつ保存して、Android アプリ (thermon) から読む手順です。アプリは Cognito の「未認証ロール」で、読み取りだけを許可されます (ログインはありません)。
 
 > **注意**: この手順は AWS のドキュメントに基づいて書いたものです。AWS の画面、料金、サービスの提供状況は変わることがあるので、最新の情報を確認してください。
 
@@ -29,6 +29,7 @@ thermon ──> Cognito ID プール (未認証) ──一時的な認証情報�
 | `type` | `switchbot` または `thermo` |
 | `temperature_c` | 温度 [℃] |
 | `humidity` | 湿度 [%] (測れないセンサでは、ない) |
+| `pressure_hpa` | 気圧 [hPa] (Thermo ノードに気圧センサ (BMP280) があるときだけ。ないときはない) |
 | `battery` | 電池残量 [%] (SwitchBot だけ。わからないときはない) |
 | `uptime_ms` | ゲートウェイの稼働時間 [ms] |
 | `timestamp` | ゲートウェイの時計の時刻 (時計が合っていないと、ない) |
@@ -61,6 +62,7 @@ thermon ──> Cognito ID プール (未認証) ──一時的な認証情報�
 | `type` | 文字列 | `switchbot` または `thermo` |
 | `temperature_c` | 数値 | 温度 [℃] |
 | `humidity` | 数値 | 湿度 [%] (測れないセンサでは、ない) |
+| `pressure_hpa` | 数値 | 気圧 [hPa] (気圧センサのある Thermo ノードだけ。ないときはない) |
 | `battery` | 数値 | 電池残量 [%] (SwitchBot だけ。わからないときはない) |
 | `expires_at` | 数値 | この時刻 (UNIX 時刻 [s]) を過ぎたら、自動で消える (TTL。受信から 30 日) |
 
@@ -157,7 +159,7 @@ WHERE isUndefined(temperature_c) = false
 - `FROM 'thermo/#'` は `thermo/` で始まる全てのトピックです (SwitchBot と、Thermo ノードの両方)。
 - `WHERE` で `temperature_c` のないメッセージを除きます。
 - `timestamp()` は IoT Core が受信した時刻 [ミリ秒] です。`floor(... / 1000)` で秒にします。`2592000` は 30 日の秒数です。
-- `SELECT *` でメッセージの全ての項目 (`node`、`type`、`temperature_c`、`humidity`、`battery`、`uptime_ms`、`timestamp`) をそのまま渡します。
+- `SELECT *` でメッセージの全ての項目 (`node`、`type`、`temperature_c`、`humidity`、`pressure_hpa`、`battery`、`uptime_ms`、`timestamp`) をそのまま渡します。項目が増えても (気圧の `pressure_hpa` など)、ルールとテーブルは変えずに済みます。
 
 ### 4.2 ルールを作る
 
@@ -296,6 +298,14 @@ thermon.nodes=<機器の MAC アドレス (コンマ区切り)>
 - `DynamoDbReadings` が `node` と `ts` の範囲で `Query` します (結果が 1 MB を超えるときは `lastEvaluatedKey` で続きを取り出します)。
 - `ts` と `node` は DynamoDB の予約語と重なるおそれがあるので、`expressionAttributeNames` で別名にしています。
 - `Query` は 1 回に最大 1 MB までです。10 秒に 1 件の 1 日分 (8,640 件) は 1 回で入らないことがあります。
+
+### 7.1 気圧を表示する
+
+Thermo ノードに気圧センサを付けると (esp32-thermo-system の `SETUP.md` の「Thermo ノードのセンサ」)、項目に `pressure_hpa` が増えます。**AWS 側の設定は変えません** (ルールは `SELECT *`、テーブルはキーのほかの属性を決めない、未認証ロールの権限は `dynamodb:Query` だけで属性によらない)。
+
+- thermon は `pressure_hpa` を読んで、最新の値の 1 行 (`1013.2 hPa`) と、気圧のグラフ (`Pressure`) に出します。気圧のない機器 (SwitchBot、DHT11 のノード) は、気圧のグラフに線が出ません。
+- 端末に保存した測定値 (SQLite) にも、気圧の列を足しました (データベースの版 2)。アプリを更新すると、保存してあった測定値は消さずに、列だけを足します (それまでの測定値の気圧は、なし)。
+- 気圧が届いているかは、esp32-thermo-system の `AWS_SETUP.md` の 8.1 のコマンドで確かめます。
 
 ## 8. これから
 

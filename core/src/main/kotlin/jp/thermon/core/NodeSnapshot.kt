@@ -14,16 +14,20 @@ private const val TEMPERATURE_MIN_SPAN = 1.0
 /** 湿度のグラフの縦軸の幅の最小値 (%). */
 private const val HUMIDITY_MIN_SPAN = 5.0
 
+/** 気圧のグラフの縦軸の幅の最小値 (hPa). 1 日の変化 (数 hPa) が, 見える幅にする. */
+private const val PRESSURE_MIN_SPAN = 4.0
+
 /** 測定値のない時間が, この長さ (s) までなら, 線をつなぐ (保存の間隔 (1 時間) の 2 倍). */
 private const val HOLD_SECONDS = HEARTBEAT_SECONDS * 2L
 
 /**
- * 1 台の機器の, 画面に表示する内容 (最新の測定値と, 温度と湿度のグラフ).
+ * 1 台の機器の, 画面に表示する内容 (最新の測定値と, 温度と湿度と気圧のグラフ).
  *
  * @property node 機器の識別子
  * @property latest 最新の測定値 (ないときは, null)
  * @property temperature 温度のグラフ (範囲の中に, 値がないときは, null)
  * @property humidity 湿度のグラフ (範囲の中に, 値がないときは, null)
+ * @property pressure 気圧のグラフ (範囲の中に, 値がないとき (気圧センサのない機器など) は, null)
  * @property syncError AWS から取り出せなかったときの, エラーのメッセージ (端末に保存した測定値を表示する. 取り出せたときは, null)
  */
 data class NodeSnapshot(
@@ -31,6 +35,7 @@ data class NodeSnapshot(
     val latest: Reading?,
     val temperature: ChartSeries?,
     val humidity: ChartSeries?,
+    val pressure: ChartSeries?,
     val syncError: String?,
 )
 
@@ -91,6 +96,13 @@ suspend fun loadSnapshot(
             ) {
                 it.humidity
             },
+        pressure =
+            buildChartSeries(
+                readings,
+                window,
+                PRESSURE_MIN_SPAN,
+                HOLD_SECONDS,
+            ) { it.pressureHpa },
         syncError = failure?.let { it.message ?: it.toString() },
     )
 }

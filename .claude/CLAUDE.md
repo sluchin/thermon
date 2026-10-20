@@ -1,6 +1,6 @@
 # プロジェクト設定
 
-Kotlin で作る Android アプリ。AWS の DynamoDB に保存された温度・湿度のデータを Cognito の ID プールの未認証ロールで読み取って、表示する (AWS のクライアント)。
+Kotlin で作る Android アプリ。AWS の DynamoDB に保存された温度・湿度・気圧のデータを Cognito の ID プールの未認証ロールで読み取って、表示する (AWS のクライアント)。
 姉妹プロジェクト [esp32-thermo-system](https://github.com/sluchin/esp32-thermo-system) (ESP32 のノードとゲートウェイ) がデータを AWS IoT Core 経由で、DynamoDB に保存する。AWS 側の準備はこのリポジトリの `AWS_DYNAMODB.md`。
 
 **Android Studio は使わない。** ビルド、テスト、整形、静的解析、ドキュメントの生成は全て Docker の中で、コマンドラインから実行する。環境構築の詳細と、検証の記録は `SETUP.md`。

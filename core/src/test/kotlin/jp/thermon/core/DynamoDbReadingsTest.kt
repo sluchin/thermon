@@ -201,5 +201,26 @@ class DynamoDbReadingsTest {
             assertEquals(21.4, reading.temperatureC)
             assertEquals(57.0, reading.humidity)
             assertEquals(100.0, reading.battery)
+            assertNull(reading.pressureHpa)
+        }
+
+    /** 気圧 (pressure_hpa) があれば, 読める (Thermo ノードの気圧センサ). */
+    @Test
+    fun readingHasPressure() =
+        runTest {
+            givenResponses(
+                QueryResponse {
+                    items =
+                        listOf(
+                            item(300, type = "thermo") +
+                                ("pressure_hpa" to AttributeValue.N("1013.2")),
+                        )
+                },
+            )
+
+            val reading = repository.latest(NODE)!!
+
+            assertEquals("thermo", reading.type)
+            assertEquals(1013.2, reading.pressureHpa)
         }
 }

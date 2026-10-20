@@ -27,6 +27,18 @@ class ReadingFormatTest {
         )
     }
 
+    /** 気圧があれば, 湿度の次に, hPa で出す. */
+    @Test
+    fun formatReadingWithPressure() {
+        val reading =
+            Reading("AA:BB:CC:DD:EE:01", 1791608709, "thermo", 21.4, 57.0, null, 1013.2)
+
+        assertEquals(
+            "AA:BB:CC:DD:EE:01  21.4 C  57.0 %  1013.2 hPa  2026-10-10 14:05:09",
+            formatReading(reading, JST),
+        )
+    }
+
     /** 湿度がないときは, 湿度の部分を, 出さない (0 ℃ 未満は, 符号を付ける). */
     @Test
     fun formatReadingWithoutHumidity() {

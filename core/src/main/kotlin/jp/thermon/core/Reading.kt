@@ -7,7 +7,7 @@
 package jp.thermon.core
 
 /**
- * DynamoDB のテーブル thermo-readings の 1 件 (温度と湿度などの測定値).
+ * DynamoDB のテーブル thermo-readings の 1 件 (温度と湿度と気圧などの測定値).
  *
  * @property node 機器の識別子 (MAC アドレス. パーティションキー)
  * @property ts 受信した時刻 (UNIX 時刻 (s). ソートキー)
@@ -15,6 +15,7 @@ package jp.thermon.core
  * @property temperatureC 温度 (℃)
  * @property humidity 湿度 (%) (測れないセンサでは, null)
  * @property battery 電池残量 (%) (SwitchBot だけ. わからないときは, null)
+ * @property pressureHpa 気圧 (hPa) (Thermo ノードに気圧センサがあるときだけ. ないときは, null)
  */
 data class Reading(
     val node: String,
@@ -23,4 +24,5 @@ data class Reading(
     val temperatureC: Double,
     val humidity: Double?,
     val battery: Double?,
+    val pressureHpa: Double? = null,
 )

@@ -58,7 +58,7 @@ data class SyncResult(
 /**
  * 古い順の測定値から, 保存するものを選ぶ.
  *
- * 前に保存した測定値から温度か湿度が変わったものと, 値が変わらなくても [HEARTBEAT_SECONDS] 以上
+ * 前に保存した測定値から温度か湿度か気圧が変わったものと, 値が変わらなくても [HEARTBEAT_SECONDS] 以上
  * たったものを選ぶ (変わらない間も, 1 時間に 1 点は残る. 機器が止まっていた間と, 区別できる).
  *
  * @param readings 古い順の測定値
@@ -85,7 +85,7 @@ fun selectToStore(
  *
  * @param previous 最後に保存した測定値
  * @param reading 新しい測定値
- * @return 温度か湿度が変わった, または, [HEARTBEAT_SECONDS] 以上たったなら, true
+ * @return 温度か湿度か気圧が変わった, または, [HEARTBEAT_SECONDS] 以上たったなら, true
  */
 private fun isWorthStoring(
     previous: Reading,
@@ -93,6 +93,7 @@ private fun isWorthStoring(
 ): Boolean =
     previous.temperatureC != reading.temperatureC ||
         previous.humidity != reading.humidity ||
+        previous.pressureHpa != reading.pressureHpa ||
         reading.ts - previous.ts >= HEARTBEAT_SECONDS
 
 /**

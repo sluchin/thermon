@@ -28,6 +28,9 @@ private const val ATTR_HUMIDITY = "humidity"
 /** 属性名: 電池残量. */
 private const val ATTR_BATTERY = "battery"
 
+/** 属性名: 気圧. */
+private const val ATTR_PRESSURE = "pressure_hpa"
+
 /**
  * DynamoDB のテーブル thermo-readings から, 測定値を取り出す ([ReadingsRepository]).
  *
@@ -108,6 +111,7 @@ internal fun toReading(item: Map<String, AttributeValue>): Reading? {
         temperatureC = temperature,
         humidity = number(item[ATTR_HUMIDITY]),
         battery = number(item[ATTR_BATTERY]),
+        pressureHpa = number(item[ATTR_PRESSURE]),
     )
 }
 

@@ -17,8 +17,10 @@
     <string name="sync_error">(offline, showing saved data: %1$s)</string>
     <string name="temperature_title">Temperature</string>
     <string name="humidity_title">Humidity</string>
+    <string name="pressure_title">Pressure</string>
     <string name="temperature_unit" translatable="false">°C</string>
     <string name="humidity_unit" translatable="false" formatted="false">%</string>
+    <string name="pressure_unit" translatable="false">hPa</string>
     <string name="chart_no_data">No data in this range</string>
     <string name="notify_channel">Outdoor alerts</string>
     <string name="notify_title">Outdoor alert</string>

@@ -75,13 +75,15 @@ class FakeRemote(
  * @param ts 時刻
  * @param temperature 温度
  * @param humidity 湿度
+ * @param pressure 気圧
  * @return 測定値
  */
 fun sample(
     ts: Long,
     temperature: Double,
     humidity: Double? = 50.0,
-): Reading = Reading(NODE, ts, null, temperature, humidity, null)
+    pressure: Double? = null,
+): Reading = Reading(NODE, ts, null, temperature, humidity, null, pressure)
 
 /** [selectToStore] と [syncReadings] の単体テスト. */
 class ReadingStoreTest {
@@ -105,6 +107,20 @@ class ReadingStoreTest {
             )
 
         assertEquals(readings, selectToStore(readings, null))
+    }
+
+    /** 気圧だけが変わっても, 保存する (気圧が, ある, ないの変化も). */
+    @Test
+    fun selectKeepsPressureChanges() {
+        val readings =
+            listOf(
+                sample(0, 20.0, pressure = 1013.2),
+                sample(60, 20.0, pressure = 1013.2),
+                sample(120, 20.0, pressure = 1012.9),
+                sample(180, 20.0),
+            )
+
+        assertEquals(listOf(readings[0], readings[2], readings[3]), selectToStore(readings, null))
     }
 
     /** 保存したものと同じ値なら, 保存しない. 1 時間 (ちょうど) たったら, 同じ値でも保存する. */

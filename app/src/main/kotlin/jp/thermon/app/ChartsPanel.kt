@@ -31,9 +31,10 @@ private const val CHART_HEIGHT_DP = 200
 private const val BUTTON_WEIGHT = 1f
 
 /**
- * 温度と湿度の 2 つのグラフと, 機器を選ぶボタン (室内, 室外など) と, 機器ごとの最新の測定値.
+ * 温度と湿度と気圧の 3 つのグラフと, 機器を選ぶボタン (室内, 室外など) と, 機器ごとの最新の測定値.
  *
- * ボタンを押した機器の線が, 2 つのグラフに重なって表示される (もう一度押すと, 消える).
+ * ボタンを押した機器の線が, 3 つのグラフに重なって表示される (もう一度押すと, 消える). 気圧のグラフは,
+ * 気圧センサのある機器 (Thermo ノード) の線だけになる.
  * 最初は, 全ての機器を表示する.
  *
  * @property context コンテキスト
@@ -49,6 +50,7 @@ class ChartsPanel(
     private val readings = specs.map { TextView(context) }
     private val temperature = createChart(R.string.temperature_title, R.string.temperature_unit)
     private val humidity = createChart(R.string.humidity_title, R.string.humidity_unit)
+    private val pressure = createChart(R.string.pressure_title, R.string.pressure_unit)
     private var results: Map<String, Result<NodeSnapshot>> = emptyMap()
     private var zone: ZoneId = ZoneId.systemDefault()
     private var loading = false
@@ -65,6 +67,7 @@ class ChartsPanel(
         readings.forEach { container.addView(it) }
         container.addView(temperature, chartParams())
         container.addView(humidity, chartParams())
+        container.addView(pressure, chartParams())
     }
 
     /** 取り出している間の表示にする. */
@@ -90,7 +93,7 @@ class ChartsPanel(
         render()
     }
 
-    /** 選んだ機器の線を, 2 つのグラフに描き直し, 機器ごとの最新の測定値を表示する. */
+    /** 選んだ機器の線を, 3 つのグラフに描き直し, 機器ごとの最新の測定値を表示する. */
     private fun render() {
         val loadingText = context.getString(R.string.loading)
         specs.forEachIndexed { index, spec ->
@@ -99,6 +102,7 @@ class ChartsPanel(
         val noData = if (loading) loadingText else context.getString(R.string.chart_no_data)
         temperature.setChart(lines(NodeSnapshot::temperature), zone, noData)
         humidity.setChart(lines(NodeSnapshot::humidity), zone, noData)
+        pressure.setChart(lines(NodeSnapshot::pressure), zone, noData)
     }
 
     /**
@@ -140,7 +144,7 @@ class ChartsPanel(
     /**
      * 選んでいる機器の線を集める (取り出せなかった機器と, 範囲に値のない機器は, 除く).
      *
-     * @param pick 機器の表示内容から, 温度か湿度の線を取り出す関数
+     * @param pick 機器の表示内容から, 温度か湿度か気圧の線を取り出す関数
      * @return 線 (機器の並びの順)
      */
     private fun lines(pick: (NodeSnapshot) -> ChartSeries?): List<ChartLine> =

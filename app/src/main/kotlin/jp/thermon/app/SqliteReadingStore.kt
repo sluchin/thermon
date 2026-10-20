@@ -17,8 +17,11 @@ import jp.thermon.core.ReadingStore
 /** データベースのファイル名. */
 private const val DB_NAME = "readings.db"
 
-/** データベースの版. */
-private const val DB_VERSION = 1
+/** データベースの版 (2: 気圧の列を足した). */
+private const val DB_VERSION = 2
+
+/** 気圧の列を足した, データベースの版. */
+private const val VERSION_PRESSURE = 2
 
 /** テーブル名. */
 private const val TABLE = "readings"
@@ -41,6 +44,9 @@ private const val COL_HUMIDITY = "humidity"
 /** 列名: 電池残量 (%). */
 private const val COL_BATTERY = "battery"
 
+/** 列名: 気圧 (hPa). */
+private const val COL_PRESSURE = "pressure_hpa"
+
 /** 列の位置: [COL_NODE]. */
 private const val IDX_NODE = 0
 
@@ -59,6 +65,9 @@ private const val IDX_HUMIDITY = 4
 /** 列の位置: [COL_BATTERY]. */
 private const val IDX_BATTERY = 5
 
+/** 列の位置: [COL_PRESSURE]. */
+private const val IDX_PRESSURE = 6
+
 /**
  * 端末の SQLite に, 測定値を保存する ([ReadingStore]). アプリのデータを消さない限り, 残る.
  *
@@ -76,6 +85,7 @@ class SqliteReadingStore private constructor(
             "CREATE TABLE $TABLE (" +
                 "$COL_NODE TEXT NOT NULL, $COL_TS INTEGER NOT NULL, $COL_TYPE TEXT, " +
                 "$COL_TEMPERATURE REAL NOT NULL, $COL_HUMIDITY REAL, $COL_BATTERY REAL, " +
+                "$COL_PRESSURE REAL, " +
                 "PRIMARY KEY ($COL_NODE, $COL_TS))",
         )
     }
@@ -85,7 +95,10 @@ class SqliteReadingStore private constructor(
         oldVersion: Int,
         newVersion: Int,
     ) {
-        // 版 1 だけ. 版が上がったときに, 移行を書く
+        // 版 1 から: 気圧の列を足す (保存してあった測定値の気圧は, NULL. 気圧なし)
+        if (oldVersion < VERSION_PRESSURE) {
+            db.execSQL("ALTER TABLE $TABLE ADD COLUMN $COL_PRESSURE REAL")
+        }
     }
 
     override fun append(readings: List<Reading>) {
@@ -128,7 +141,15 @@ class SqliteReadingStore private constructor(
     companion object {
         /** 取り出す列 (列の位置の定数と, 同じ順). */
         private val COLUMNS =
-            arrayOf(COL_NODE, COL_TS, COL_TYPE, COL_TEMPERATURE, COL_HUMIDITY, COL_BATTERY)
+            arrayOf(
+                COL_NODE,
+                COL_TS,
+                COL_TYPE,
+                COL_TEMPERATURE,
+                COL_HUMIDITY,
+                COL_BATTERY,
+                COL_PRESSURE,
+            )
 
         @Volatile private var instance: SqliteReadingStore? = null
 
@@ -157,6 +178,7 @@ class SqliteReadingStore private constructor(
                 put(COL_TEMPERATURE, reading.temperatureC)
                 put(COL_HUMIDITY, reading.humidity)
                 put(COL_BATTERY, reading.battery)
+                put(COL_PRESSURE, reading.pressureHpa)
             }
 
         /**
@@ -188,6 +210,15 @@ class SqliteReadingStore private constructor(
                         null
                     } else {
                         cursor.getDouble(IDX_BATTERY)
+                    },
+                pressureHpa =
+                    if (cursor.isNull(
+                            IDX_PRESSURE,
+                        )
+                    ) {
+                        null
+                    } else {
+                        cursor.getDouble(IDX_PRESSURE)
                     },
             )
     }
