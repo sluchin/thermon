@@ -114,7 +114,7 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
   # 3 日より前の実行 (ログと artifact) を削除する. 実行中のものは, 3 日より前に始まっていても, 削除できないので, 無視する
   cleanup:
