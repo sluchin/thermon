@@ -302,7 +302,7 @@ adb はホストで実行します (Docker に USB を渡す設定を避ける�
    adb install -r app/build/outputs/apk/debug/thermon-*-debug.apk
    ```
 
-5. ログを見るときは `adb logcat` を使います (`adb logcat -s <タグ>` で絞れます)。
+5. ログを見るときは `adb logcat` を使います (`adb logcat -s <タグ>` で絞れます)。PC がなくても、アプリのメニューの「Log」で、ファイルに残したログ (落ちたときの例外も) を見て、保存や共有ができます。
 
 インストールしたあとの、アプリの起動と確認は次の「アプリを動かして確認する」です。
 
@@ -463,4 +463,5 @@ adb logcat -s Readings:D Alert:D AndroidRuntime:E
 
 - デバッグのログ (`AppLog.d`) は、デバッグ版 (`assembleDebug`) だけで出ます。リリース版では、情報 (`AppLog.i`)、警告 (`AppLog.w`)、エラー (`AppLog.e`) だけが出ます。
 - アプリが落ちたときの例外は、`AndroidRuntime` のタグで出ます。
+- **アプリの中で見る**: ログはアプリのファイル (`files/logs/app.log`。1 MB で切り替えて、古いものを 3 つ残す) にも書きます。落ちたときの例外も書きます。メニューの「Log」で、新しい順に見て、重大度で絞り込めます。「Save」で Android の保存の画面 (Google Drive も選べる) に保存し、「Share」でメールなどに送り、「Clear」で消します。PC がなくても見られます。
 - Google Play で公開したら、落ちたときの例外と ANR (応答なし) は、Play Console の「Android Vitals」に集まります (アプリのコードは要りません。利用者が、使用状況と診断情報の送信を許可している端末から、集まります)。リリース版で R8 の難読化を有効にしたら、Play Console に、対応表 (`mapping.txt`) を上げると、例外の場所が読めます。

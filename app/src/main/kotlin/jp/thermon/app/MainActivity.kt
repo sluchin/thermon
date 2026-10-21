@@ -8,10 +8,10 @@ package jp.thermon.app
 
 import android.Manifest
 import android.app.Activity
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.util.TypedValue
-import android.view.WindowInsets
+import android.view.Menu
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -35,9 +35,6 @@ import java.time.ZoneId
 
 /** ログのタグ. */
 private const val TAG = "Readings"
-
-/** 画面の端と, 内容の間の余白 (dp). */
-private const val CONTENT_PADDING_DP = 16
 
 /** ミリ秒を, 秒にするための値. */
 private const val MILLIS_PER_SECOND = 1000L
@@ -77,7 +74,7 @@ class MainActivity : Activity() {
                 clipToPadding = false
                 addView(content)
             }
-        applySystemBarInsets()
+        padForSystemBars(root)
         setContentView(root)
 
         requestNotificationPermission()
@@ -190,32 +187,17 @@ class MainActivity : Activity() {
     }
 
     /**
-     * 内容が, システムバー (ステータスバーなど) と, アクションバーの下に, 隠れないようにする.
+     * メニュー (アプリのログを見る) を作る. 選ぶと, ログの画面 ([LogActivity]) を開く.
      *
-     * Android 15 以降 (targetSdk 35 以上) は, 画面が, システムバーの下まで広がる (edge-to-edge).
-     * システムバーの余白と, アクションバーの高さを, パディングに入れる. それ以前の版は, 広がらないので,
-     * 何もしない.
+     * @param menu メニュー
+     * @return メニューを出すので, true
      */
-    private fun applySystemBarInsets() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            return
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menu.add(R.string.menu_log).setOnMenuItemClickListener {
+            startActivity(Intent(this, LogActivity::class.java))
+            true
         }
-        val padding = dp(CONTENT_PADDING_DP)
-        val actionBarSize =
-            TypedValue().let {
-                theme.resolveAttribute(android.R.attr.actionBarSize, it, true)
-                TypedValue.complexToDimensionPixelSize(it.data, resources.displayMetrics)
-            }
-        root.setOnApplyWindowInsetsListener { target, insets ->
-            val bars = insets.getInsets(WindowInsets.Type.systemBars())
-            target.setPadding(
-                bars.left + padding,
-                bars.top + actionBarSize + padding,
-                bars.right + padding,
-                bars.bottom + padding,
-            )
-            insets
-        }
+        return true
     }
 
     /** 画面を閉じるときに, 取り出し中の処理を止める. */

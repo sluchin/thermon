@@ -26,4 +26,18 @@
     <string name="notify_title">Outdoor alert</string>
     <string name="notify_freezing">Outdoor temperature is below 0 °C (%1$s °C)</string>
     <string name="notify_humid">Outdoor humidity is over 80 %% (%1$s %%)</string>
+    <string name="menu_log">Log</string>
+    <string name="log_title">thermon log</string>
+    <string name="log_level_info">Info+</string>
+    <string name="log_level_warn">Warnings+</string>
+    <string name="log_level_error">Errors</string>
+    <string name="log_level_all">All</string>
+    <string name="log_save">Save</string>
+    <string name="log_share">Share</string>
+    <string name="log_clear">Clear</string>
+    <string name="log_clear_confirm">Delete all the logs?</string>
+    <string name="log_empty">No logs.</string>
+    <string name="log_saved">Saved the log.</string>
+    <string name="log_read_error">Could not read the log: %1$s</string>
+    <string name="log_save_error">Could not save the log: %1$s</string>
 </resources>

@@ -68,7 +68,9 @@ scripts/cloud-docker.sh start          # Docker のデーモンを起動する (
 - ログは `AppLog` (`AppLog.kt`) だけを使う (`android.util.Log` を直接呼ばない)。タグは、ファイルごとの `private const val TAG` (機能の名前)。
 - `AppLog.d` はデバッグ版だけ出す (判定は、関数の中の `BuildConfig.DEBUG`。引数は、文字列を返す関数にして、リリース版では文字列も作らない)。`AppLog.i` (最低限の情報)、`AppLog.w` (失敗したが続けられる)、`AppLog.e` (利用者の操作が失敗した) は、リリース版でも出す。
 - AWS の認証情報と、鍵は、どのレベルでも書かない。ログの文字は英語。
-- 落ちたときの例外は、Android が logcat に出し、Google Play では Play Console の Android Vitals が集める (コードは要らない)。見方は `SETUP.md` の「ログを見る」。
+- `AppLog` は logcat に加えて、アプリのファイル (`files/logs/app.log`。1 MB で切り替えて、古いものを 3 つ残す) にも書く (`ThermonApp` の `AppLog.init`。書くのは別のスレッド 1 本)。ファイルの書き方と読み方 (`RotatingLogFile`、`formatLogEntry`、`parseLog`) は `core` の `LogFile.kt`。
+- 落ちたときの例外も、`AppLog.init` がファイルに書いてから、Android の通常の処理に渡す。
+- ログはアプリのメニューの「Log」(`LogActivity`) で見る。重大度で絞り込み、保存 (Android の保存の画面。Google Drive も選べる)、共有 (メールなど)、消すことができる。ファイルのログも、外に出るので、書かないものの決まりは同じ。
 
 ## コーディング規約
 
