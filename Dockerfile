@@ -1,5 +1,5 @@
 # 開発用のイメージ (dev). 最後の段 (emulator) はエミュレータを動かすときだけ使う
-FROM ubuntu:24.04 AS dev
+FROM ubuntu:26.04 AS dev
 
 ENV DEBIAN_FRONTEND=noninteractive
 
