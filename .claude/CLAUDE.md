@@ -46,7 +46,7 @@ scripts/cloud-docker.sh start          # Docker のデーモンを起動する (
 - **Maven Central の `429 Too Many Requests`** (共有の出口の IP が回数制限を受ける)。Google のミラー `maven-central.storage-download.googleapis.com` を先に参照する。`scripts/cloud-docker.sh run` がクラウドのときに毎回、`scripts/maven-mirror.init.gradle.kts` を Gradle のホーム (`/var/cache/thermon-gradle`。`GRADLE_HOME_DIR` で変えられる) の `init.d/` に置く (環境変数もセットアップスクリプトも要らない)。ミラーに届かないときは `WARNING` を出す (「Allowed domains」にミラーのドメインを足す)。初期化スクリプトを貼り付けで作ると、全角スペースが混ざって壊れたことがあるので、リポジトリのファイルにした。
 - **クラウドでの結果**: `scripts/cloud-docker.sh build` と `scripts/cloud-docker.sh run build` が成功した (APK 4.7 MB)。クラウドのセッションのコミットの名前も、`Tetsuya Higashi` になった (環境変数 `GIT_AUTHOR_NAME` などが効く)。`test` (2 分 15 秒)、`coverage` (12 秒。`core` の行と分岐が 100%)、`analyze` (50 秒。detekt と Android Lint)、`format` (27 秒)、`docs` (32 秒。Dokka の警告なし) も成功する。
   - **`run build` が 2 回失敗した理由と、直し方**: ミラーに成果物がない (404) と、次の `repo.maven.apache.org` (Maven Central) が 429 を返す。Gradle は 429 で解決を打ち切り、後ろのリポジトリに進まない。ktlint のプラグインは Plugin Portal にしかないので、解決できなかった。`scripts/maven-mirror.init.gradle.kts` でプラグインの解決の順を「ミラー、`google()`、Plugin Portal (`https://plugins.gradle.org/m2/`)」にして、直した (ブランチ `ccr-b12f7fd7-cyffyr` のコミット `987e131`)。Portal だけを足すと、Portal が Maven Central に転送して、429 になり、`google()` にある AGP を解決できないので、`google()` を Portal の前に置く。
-- **Docker Hub の `429`** (ベースのイメージ `ubuntu:24.04` の取得): `scripts/cloud-docker.sh build` が失敗したときは Google のミラー `mirror.gcr.io/library/ubuntu:24.04` から取って、`ubuntu:24.04` のタグを付けてから、ビルドする (スクリプトが自動でする。)。
+- **Docker Hub の `429`** (ベースのイメージ `ubuntu:26.04` の取得): `scripts/cloud-docker.sh build` が失敗したときは Google のミラー `mirror.gcr.io/library/ubuntu:26.04` から取って、`ubuntu:26.04` のタグを付けてから、ビルドする (スクリプトが自動でする。)。
 - 同じ失敗を繰り返さない。Docker を使わずに、VM の上で、直接ビルドする方法も、ある。
 
 ## プロジェクト構成

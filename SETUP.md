@@ -2,13 +2,13 @@
 
 このドキュメントは Kotlin で Android アプリ (AWS のクライアント) を**Android Studio を使わずに、コマンドラインだけで**開発するための環境構築手順です。ビルド、テスト、整形、静的解析、ドキュメントの生成は Docker の中で実行します (姉妹プロジェクトの [esp32-thermo-system](https://github.com/sluchin/esp32-thermo-system) と同じ方針です)。
 
-> **このドキュメントの状態**: `Dockerfile`、`docker-compose.yml`、Gradle のプロジェクトの雛形 (`core` と `app`) はリポジトリにあります。下の全てのサービスが使えます (Ubuntu 24.04 の Docker イメージ)。「未検証」と書いた項目は CI と無線のデバッグです。
+> **このドキュメントの状態**: `Dockerfile`、`docker-compose.yml`、Gradle のプロジェクトの雛形 (`core` と `app`) はリポジトリにあります。下の全てのサービスが使えます (Ubuntu 26.04 の Docker イメージ)。「未検証」と書いた項目は CI と無線のデバッグです。
 
 ## 方針
 
 | 項目 | 方針 |
 |:---|:---|
-| 開発環境 | Docker (Ubuntu 24.04)。JDK、Gradle、Android SDK はイメージに入れる。ホストには Docker と、実機に転送するための adb だけを入れる |
+| 開発環境 | Docker (Ubuntu 26.04)。JDK、Gradle、Android SDK はイメージに入れる。ホストには Docker と、実機に転送するための adb だけを入れる |
 | エディタ | 何でもよい (Android Studio は使わない)。整形と静的解析はコマンドで実行する |
 | 構成 | 2 つのモジュール。`core` (純粋な Kotlin。AWS のクライアントと、データの処理。単体テストで行と分岐のカバレッジ 100%) と、`app` (Android。画面だけの薄い層) |
 | 品質 | 警告ゼロ (Kotlin の警告をエラーにする)。ktlint (整形)、detekt (静的解析)、Android Lint (警告をエラーにする)、JaCoCo (カバレッジ)、Dokka (ドキュメント) |
@@ -57,7 +57,7 @@ docker compose build
 
 イメージの中身は次のとおりです。
 
-- `ubuntu:24.04` に `openjdk-17-jdk-headless`、`unzip`、`curl`、`git` を入れる。`LANG` と `LC_ALL` は `C.UTF-8` にする (ログの日本語が文字化けしないように)。
+- `ubuntu:26.04` に `openjdk-17-jdk-headless`、`unzip`、`curl`、`git` を入れる。`LANG` と `LC_ALL` は `C.UTF-8` にする (ログの日本語が文字化けしないように)。
 - Gradle 9.8.1 を `/opt` に展開する (ラッパー `gradlew` を最初に作るためだけに使う。ビルドは `./gradlew`)。
 - Android のコマンドラインツールを `/opt/android-sdk/cmdline-tools/latest` に展開して、ライセンスに同意して (`yes | sdkmanager --licenses`)、`platform-tools`、`platforms;android-37.0`、`build-tools;37.0.0` を入れる。
 - `ANDROID_HOME=/opt/android-sdk`、`GRADLE_USER_HOME=/gradle-home` を設定して、`/gradle-home` を誰でも書ける権限 (777) にする。`docker-compose.yml` で名前付きボリュームをここに mount する (Gradle の依存関係のキャッシュ。2 回目からはダウンロードしない)。
