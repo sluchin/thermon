@@ -4,7 +4,7 @@ AWS に保存された温度・湿度・気圧のデータを読み取って、�
 
 姉妹プロジェクト [esp32-thermo-system](https://github.com/sluchin/esp32-thermo-system) (ESP32 の温度センサのノードと、ゲートウェイ) が AWS IoT Core 経由で、DynamoDB に保存したデータを Cognito の ID プールの未認証ロールで、読み取ります (ログインはありません)。
 
-```
+```text
 ESP32 のノード ──BLE──> ゲートウェイ ──MQTT──> AWS IoT Core ──ルール──> DynamoDB
                                                                           ▲ Query (読み取りだけ)
 Android アプリ (thermon) ──> Cognito ID プール (未認証) ──一時的な認証情報──┘
@@ -33,7 +33,7 @@ Android アプリ (thermon) ──> Cognito ID プール (未認証) ──一�
 
 ## プロジェクト構成
 
-```
+```text
 core/    純粋な Kotlin (Android に依存しない). AWS のクライアントと, 測定値の処理. 単体テストで, 行と分岐のカバレッジ 100%
 app/     Android アプリ. 画面と, 設定の読み込みだけの, 薄い層
 config/  detekt (静的解析) の設定

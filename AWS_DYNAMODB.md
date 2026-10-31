@@ -8,7 +8,7 @@ AWS CLI をまだ使えるようにしていないときは先に [AWS_CLI.md](A
 
 ## 1. 構成
 
-```
+```text
 ゲートウェイ ──MQTT──> AWS IoT Core ──ルール──> DynamoDB (テーブル thermo-readings)
                           thermo/#                       ▲
                                                          │ Query (読み取りだけ)

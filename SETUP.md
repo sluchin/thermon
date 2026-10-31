@@ -79,7 +79,7 @@ docker compose run --rm dev gradle wrapper --gradle-version <GRADLE_VERSION>
 
 ### 5. 構成
 
-```
+```text
 Dockerfile, docker-compose.yml   開発環境 (Docker). Dockerfile は, 2 段 (dev と emulator)
 scripts/                         エミュレータの起動 (emulator.sh) と, 待ち合わせ (emulator-wait.sh).
                                  クラウドのセッションで Docker を使う補助 (cloud-docker.sh) と,
@@ -167,7 +167,7 @@ Gradle のキャッシュ (依存関係のダウンロード) も消すときは
 
 アプリ (`core`) は AWS IoT Core が DynamoDB に保存したデータを**Cognito の ID プールの未認証ロール**で読み取ります (ログインはありません)。
 
-```
+```text
 Kotlin アプリ ──> Cognito ID プール (未認証) ──一時的な認証情報──> DynamoDB (テーブル thermo-readings)
                                                                        Query (読み取りだけ)
 ```
@@ -448,7 +448,6 @@ scripts/cloud-docker.sh run build  # docker compose run --rm build (test, covera
 - **画面の作り方**: 通常のビュー (View) と、Canvas で描くカスタム View (`LineChartView`) にしました (ライブラリを増やさないため)。Jetpack Compose は使っていません。
 - **アプリの ID (`applicationId`) と、リリースの署名**。
 - **整形と静的解析の規則の詳細**: 今は ktlint と detekt の既定の規則に最小の設定 (`.editorconfig`、`config/detekt/detekt.yml`) だけです。Kotlin の公式のコーディング規約は [CODING_STYLE.md](CODING_STYLE.md) にリンクだけ書きました。このリポジトリ独自の規約はこれからまとめます。
-
 
 ## ログを見る
 
