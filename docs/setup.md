@@ -172,7 +172,7 @@ Kotlin アプリ ──> Cognito ID プール (未認証) ──一時的な認�
                                                                        Query (読み取りだけ)
 ```
 
-AWS 側の準備 (テーブル `thermo-readings`、IoT のルール、ID プール、未認証ロール) は [AWS_DYNAMODB.md](AWS_DYNAMODB.md) の手順で行います。テーブルはパーティションキーが `node` (機器の MAC アドレス)、ソートキーが `ts` (UNIX 時刻 [s]) です。未認証ロールの権限は**そのテーブルの `dynamodb:Query` だけ**にします。
+AWS 側の準備 (テーブル `thermo-readings`、IoT のルール、ID プール、未認証ロール) は [AWS_DYNAMODB.md](aws_dynamodb.md) の手順で行います。テーブルはパーティションキーが `node` (機器の MAC アドレス)、ソートキーが `ts` (UNIX 時刻 [s]) です。未認証ロールの権限は**そのテーブルの `dynamodb:Query` だけ**にします。
 
 ### クライアント (`core`)
 
@@ -214,7 +214,7 @@ thermon.nodes=AA:BB:CC:DD:EE:01=室外,AA:BB:CC:DD:EE:02=室内
 
 - **単体テスト**: Cognito と DynamoDB のクライアントを MockK で偽物にして、認証情報の取得とキャッシュ、期限での取り直し、同時の呼び出し、応答に項目がないときの例外、`Query` の要求 (キー条件、`lastEvaluatedKey`、新しい順の 1 件)、読めない項目の除外を確認しています (`core` の行と分岐のカバレッジ 100%)。
 - **ビルド**: 設定が `BuildConfig` に入ります。設定がないときは空になります。
-- **実機での動作**: AWS の準備 ([AWS_DYNAMODB.md](AWS_DYNAMODB.md)) をして、`local.properties` に書き、実機の Android 端末に入れて、起動します。実際の AWS (Cognito の ID プール、DynamoDB のテーブル、未認証ロール) に接続して、機器ごとの最新の測定値(温度、湿度、受信した時刻)が**文字列で**表示されます。手順は次の「アプリを動かして確認する」です。
+- **実機での動作**: AWS の準備 ([AWS_DYNAMODB.md](aws_dynamodb.md)) をして、`local.properties` に書き、実機の Android 端末に入れて、起動します。実際の AWS (Cognito の ID プール、DynamoDB のテーブル、未認証ロール) に接続して、機器ごとの最新の測定値(温度、湿度、受信した時刻)が**文字列で**表示されます。手順は次の「アプリを動かして確認する」です。
 - **グラフの表示**: 温度と湿度と気圧の 3 つのグラフに機器ごとの線を重ねて表示します (気圧は、気圧センサのある機器だけ)。グラフの上の機器のボタン (`室内`、`室外` など。表示名は `thermon.nodes` で付けます) を押すと、その機器の線を出したり消したりします (最初は全て表示)。線の色は設定の順に橙、青、緑、紫で、グラフの右上の凡例と、ボタンの文字の色が同じです。縦軸は表示している線が全て入る範囲にそろいます。機器ごとの最新の測定値の 1 行はボタンの下に出ます。範囲のボタン (1 h、6 h、24 h、7 d、30 d、1 y) と、開始と終了の日付のボタン (カレンダー) で横軸と線が変わります。縦軸の値と、横軸の開始と終了の時刻 (端末のタイムゾーン) も表示します。測定値のない範囲は「No data in this range」と表示します。
 
   <a href="assets/thermon-chart.png"><img src="assets/thermon-chart.png" width="320" alt="thermon の画面 (室内と室外の温度と湿度のグラフ)"></a>
@@ -312,7 +312,7 @@ adb はホストで実行します (Docker に USB を渡す設定を避ける�
 
 ## アプリを動かして確認する
 
-AWS の準備 ([AWS_DYNAMODB.md](AWS_DYNAMODB.md)) が終わったあとの手順です。
+AWS の準備 ([AWS_DYNAMODB.md](aws_dynamodb.md)) が終わったあとの手順です。
 
 1. **AWS にデータが入っているか確認する** (アプリより先に)
 
@@ -320,7 +320,7 @@ AWS の準備 ([AWS_DYNAMODB.md](AWS_DYNAMODB.md)) が終わったあとの手�
    aws dynamodb scan --region ap-northeast-1 --table-name thermo-readings --max-items 5
    ```
 
-   項目が返れば、ゲートウェイ、IoT Core、ルール、DynamoDB が動いています。空なら、[AWS_DYNAMODB.md](AWS_DYNAMODB.md) の 5 章の「何も入らないとき」を見ます。
+   項目が返れば、ゲートウェイ、IoT Core、ルール、DynamoDB が動いています。空なら、[AWS_DYNAMODB.md](aws_dynamodb.md) の 5 章の「何も入らないとき」を見ます。
 
 2. **`local.properties` に接続先を書く** (リポジトリの直下。コミットしない)
 
@@ -447,7 +447,7 @@ scripts/cloud-docker.sh run build  # docker compose run --rm build (test, covera
 - **AWS で読み取る範囲の使い方**: 機器ごとの最新の 1 件と、範囲 (1 時間、6 時間、24 時間) のグラフは実装しました。機器の一覧 (テーブルのキーは機器の指定が必要で、一覧はアプリの設定に持つ)、自動の更新 (今は起動したときと範囲のボタンを押したときだけ取り出す)、より長い範囲 (7 日など。件数が多いので、取り出しの分け方を決める) はこれから決めます。
 - **画面の作り方**: 通常のビュー (View) と、Canvas で描くカスタム View (`LineChartView`) にしました (ライブラリを増やさないため)。Jetpack Compose は使っていません。
 - **アプリの ID (`applicationId`) と、リリースの署名**。
-- **整形と静的解析の規則の詳細**: 今は ktlint と detekt の既定の規則に最小の設定 (`.editorconfig`、`config/detekt/detekt.yml`) だけです。Kotlin の公式のコーディング規約は [CODING_STYLE.md](CODING_STYLE.md) にリンクだけ書きました。このリポジトリ独自の規約はこれからまとめます。
+- **整形と静的解析の規則の詳細**: 今は ktlint と detekt の既定の規則に最小の設定 (`.editorconfig`、`config/detekt/detekt.yml`) だけです。Kotlin の公式のコーディング規約は [CODING_STYLE.md](coding_style.md) にリンクだけ書きました。このリポジトリ独自の規約はこれからまとめます。
 
 ## ログを見る
 

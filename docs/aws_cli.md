@@ -1,6 +1,6 @@
 # AWS CLI の準備 (IAM ユーザーとアクセスキー)
 
-[AWS_DYNAMODB.md](AWS_DYNAMODB.md) の手順 (テーブル、IAM のロール、IoT のルール、Cognito) は AWS CLI のコマンドで実行します。この文書はその前に自分の PC で AWS CLI を使えるようにする手順です。
+[AWS_DYNAMODB.md](aws_dynamodb.md) の手順 (テーブル、IAM のロール、IoT のルール、Cognito) は AWS CLI のコマンドで実行します。この文書はその前に自分の PC で AWS CLI を使えるようにする手順です。
 
 > **注意**: 画面の名前や並びは AWS の更新で変わることがあります。最新の情報は AWS のドキュメントで確認してください。
 
@@ -97,10 +97,10 @@ aws sts get-caller-identity
 
 `UserId`、`Account`、`Arn` が表示されれば、設定できています。
 
-- **`Account`** (12桁) がアカウント ID です。[AWS_DYNAMODB.md](AWS_DYNAMODB.md) の手順はこの値をコマンドで取り出して、変数 `ACCOUNT_ID` に入れます (書き写す必要はありません)。
+- **`Account`** (12桁) がアカウント ID です。[AWS_DYNAMODB.md](aws_dynamodb.md) の手順はこの値をコマンドで取り出して、変数 `ACCOUNT_ID` に入れます (書き写す必要はありません)。
 - 別のプロファイルで保存したときは `--profile <名前>` を付けます。
 
-あとは [AWS_DYNAMODB.md](AWS_DYNAMODB.md) の手順を 2章 (テーブル) から順に実行します。3章 (IAM ロール) のコマンドはカレントディレクトリに `iot-trust.json` と `iot-put.json` を作ります。リポジトリの外 (`~/tmp` など) で実行すると、ファイルが残りません。
+あとは [AWS_DYNAMODB.md](aws_dynamodb.md) の手順を 2章 (テーブル) から順に実行します。3章 (IAM ロール) のコマンドはカレントディレクトリに `iot-trust.json` と `iot-put.json` を作ります。リポジトリの外 (`~/tmp` など) で実行すると、ファイルが残りません。
 
 ## 8. 作業が終わったら
 
@@ -113,6 +113,6 @@ aws sts get-caller-identity
 CloudShell はコンソールの右上のアイコンから開く、ブラウザ内のターミナルです。サインインしたユーザーの権限で、AWS CLI がすぐに使えます。
 
 - アクセスキーも、AWS CLI のインストールも、要りません。
-- [AWS_DYNAMODB.md](AWS_DYNAMODB.md) のコマンドをそのまま貼って実行できます (アカウント ID は変数に自動で入ります)。
+- [AWS_DYNAMODB.md](aws_dynamodb.md) のコマンドをそのまま貼って実行できます (アカウント ID は変数に自動で入ります)。
 - サインインしているユーザーに手順で使うサービスの権限が必要です。
 - 1回きりの作業なら、この方法をお勧めします。ルートユーザーでの作業はお勧めしません。

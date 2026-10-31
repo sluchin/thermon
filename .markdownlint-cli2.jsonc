@@ -24,7 +24,6 @@
     ".gemini.md",
     "build/**",
     "dist/**",
-    "docs/**",
     "coverage/**",
     "app/build/**",
     "core/build/**"

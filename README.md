@@ -12,7 +12,7 @@ Android アプリ (thermon) ──> Cognito ID プール (未認証) ──一�
 
 **Android Studio は使いません。** ビルド、テスト、整形、静的解析、ドキュメントの生成は全てコマンドラインで、Docker の中で実行します。
 
-> **状態**: 雛形と、AWS のクライアント (Cognito の未認証の認証情報と、DynamoDB の Query) を実装しました。グラフの表示 (温度と湿度。範囲は 1 h、6 h、24 h) も、実装しています。単体テストは AWS SDK のクライアントを偽物にして、行います ([SETUP.md](SETUP.md))。
+> **状態**: 雛形と、AWS のクライアント (Cognito の未認証の認証情報と、DynamoDB の Query) を実装しました。グラフの表示 (温度と湿度。範囲は 1 h、6 h、24 h) も、実装しています。単体テストは AWS SDK のクライアントを偽物にして、行います ([SETUP.md](docs/setup.md))。
 
 ## 画面
 
@@ -92,17 +92,17 @@ thermon.table=thermo-readings
 thermon.nodes=AA:BB:CC:DD:EE:01=室外,AA:BB:CC:DD:EE:02=室内
 ```
 
-`thermon.identityPoolId` と `thermon.nodes` が空のままだと、アプリは「AWS is not configured」と表示します。値を変えたら、ビルドし直します。AWS 側 (テーブル、IoT のルール、ID プール、未認証ロール) の準備は [AWS_DYNAMODB.md](AWS_DYNAMODB.md) を参照してください。詳しくは [SETUP.md](SETUP.md) の「AWS への接続」です。
+`thermon.identityPoolId` と `thermon.nodes` が空のままだと、アプリは「AWS is not configured」と表示します。値を変えたら、ビルドし直します。AWS 側 (テーブル、IoT のルール、ID プール、未認証ロール) の準備は [AWS_DYNAMODB.md](docs/aws_dynamodb.md) を参照してください。詳しくは [SETUP.md](docs/setup.md) の「AWS への接続」です。
 
 ## 実機へのインストール
 
-adb はホストで実行します (端末の設定を含む手順は [SETUP.md](SETUP.md) の「実機へのインストール」)。
+adb はホストで実行します (端末の設定を含む手順は [SETUP.md](docs/setup.md) の「実機へのインストール」)。
 
 ```bash
 adb install -r app/build/outputs/apk/debug/thermon-*-debug.apk
 ```
 
-インストールしたら、端末のアプリ一覧から **`thermon`** を開きます。AWS の準備のあとに、アプリを動かして確認する手順と、うまくいかないときの確認先は [SETUP.md](SETUP.md) の「アプリを動かして確認する」です。
+インストールしたら、端末のアプリ一覧から **`thermon`** を開きます。AWS の準備のあとに、アプリを動かして確認する手順と、うまくいかないときの確認先は [SETUP.md](docs/setup.md) の「アプリを動かして確認する」です。
 
 ## エミュレータ
 
@@ -117,7 +117,7 @@ docker compose exec emulator adb install -r app/build/outputs/apk/debug/thermon-
 docker compose exec emulator adb shell am start -n jp.thermon.app/.MainActivity
 ```
 
-画面は <http://localhost:6080/vnc.html> で見ます。止めるときは `docker compose down` です。詳しくは [SETUP.md](SETUP.md) の「エミュレータ (Docker)」です。
+画面は <http://localhost:6080/vnc.html> で見ます。止めるときは `docker compose down` です。詳しくは [SETUP.md](docs/setup.md) の「エミュレータ (Docker)」です。
 
 ## 開発
 
@@ -140,13 +140,13 @@ docker compose exec emulator adb shell am start -n jp.thermon.app/.MainActivity
 
 ## CI
 
-Push 時に GitHub Actions が開発用の Docker イメージで、`build` `test` `coverage` `format` `analyze` `docs` を実行します。ログはアーティファクトに保存します (APK は置きません)。main への push では、ドキュメント (Dokka) を GitHub Pages に公開します。詳しくは [SETUP.md](SETUP.md) の「CI (GitHub Actions)」です。
+Push 時に GitHub Actions が開発用の Docker イメージで、`build` `test` `coverage` `format` `analyze` `docs` を実行します。ログはアーティファクトに保存します (APK は置きません)。main への push では、ドキュメント (Dokka) を GitHub Pages に公開します。詳しくは [SETUP.md](docs/setup.md) の「CI (GitHub Actions)」です。
 
 ## ドキュメント
 
-- [AWS_CLI.md](AWS_CLI.md): AWS CLI の準備 (インストール、`aws login`、IAM ユーザーとアクセスキー、CloudShell)。
-- [AWS_DYNAMODB.md](AWS_DYNAMODB.md): AWS 側の準備 (DynamoDB のテーブル、IoT のルール、Cognito の ID プール、未認証ロール)。
-- [SETUP.md](SETUP.md): 開発環境の構築と、検証の記録 (ツールの版、落とし穴、AWS への接続の詳細)。
+- [AWS_CLI.md](docs/aws_cli.md): AWS CLI の準備 (インストール、`aws login`、IAM ユーザーとアクセスキー、CloudShell)。
+- [AWS_DYNAMODB.md](docs/aws_dynamodb.md): AWS 側の準備 (DynamoDB のテーブル、IoT のルール、Cognito の ID プール、未認証ロール)。
+- [SETUP.md](docs/setup.md): 開発環境の構築と、検証の記録 (ツールの版、落とし穴、AWS への接続の詳細)。
 - [.claude/CLAUDE.md](.claude/CLAUDE.md): コマンド、コーディング規約、テストの方針、コミットガイドライン。
 
 ## ライセンス
