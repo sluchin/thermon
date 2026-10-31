@@ -285,7 +285,7 @@ aws cognito-identity get-identity-pool-roles \
 
 ## 7. thermon から読む
 
-thermon の `core` がこの手順で作った ID プールとテーブルを使います。接続先はリポジトリに入れず、`local.properties` に書きます ([README.md](README.md) の「設定」)。
+thermon の `core` がこの手順で作った ID プールとテーブルを使います。接続先はリポジトリに入れず、`local.properties` に書きます ([README.md](../README.md) の「設定」)。
 
 ```properties
 thermon.region=ap-northeast-1
