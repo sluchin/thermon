@@ -86,7 +86,7 @@ scripts/                         エミュレータの起動 (emulator.sh) と, 
                                  Maven Central のミラーの初期化スクリプト (maven-mirror.init.gradle.kts)
 .github/                         GitHub Actions (workflows/build.yml と, Docker イメージと Gradle キャッシュのアクション)
 .claude/                         Claude Code の設定 (CLAUDE.md と, クラウドのセッションで Docker のデーモンを起動するフック)
-CODING_STYLE.md                  コーディングスタイル (今は, Kotlin の公式の規約へのリンクだけ)
+docs/                            文書 (setup.md, aws_cli.md, aws_dynamodb.md, coding_style.md: Kotlin の公式のコーディング規約の日本語訳)
 settings.gradle.kts              モジュール: :core と :app
 build.gradle.kts                 プラグインの宣言だけ (各モジュールで適用する)
 gradle/libs.versions.toml        ライブラリとプラグインの版 (版カタログ)
@@ -112,7 +112,7 @@ app/                             Android (画面だけの薄い層. 設定の読
 
 ### Docker のサービス
 
-`docker-compose.yml` に次のサービスがあります。名前は esp32-thermo-system に合わせました。どれも `--rm` を付けて実行します。
+`docker-compose.yml` に次のサービスがあります。名前は esp32-thermo-system と同じです。どれも `--rm` を付けて実行します。
 
 | サービス | 内容 | 実行する Gradle のタスク |
 |:---|:---|:---|
@@ -172,7 +172,7 @@ Kotlin アプリ ──> Cognito ID プール (未認証) ──一時的な認�
                                                                        Query (読み取りだけ)
 ```
 
-AWS 側の準備 (テーブル `thermo-readings`、IoT のルール、ID プール、未認証ロール) は [AWS_DYNAMODB.md](aws_dynamodb.md) の手順で行います。テーブルはパーティションキーが `node` (機器の MAC アドレス)、ソートキーが `ts` (UNIX 時刻 [s]) です。未認証ロールの権限は**そのテーブルの `dynamodb:Query` だけ**にします。
+AWS 側の準備 (テーブル `thermo-readings`、IoT のルール、ID プール、未認証ロール) は [aws_dynamodb.md](aws_dynamodb.md) の手順で行います。テーブルはパーティションキーが `node` (機器の MAC アドレス)、ソートキーが `ts` (UNIX 時刻 [s]) です。未認証ロールの権限は**そのテーブルの `dynamodb:Query` だけ**にします。
 
 ### クライアント (`core`)
 
@@ -214,7 +214,7 @@ thermon.nodes=AA:BB:CC:DD:EE:01=室外,AA:BB:CC:DD:EE:02=室内
 
 - **単体テスト**: Cognito と DynamoDB のクライアントを MockK で偽物にして、認証情報の取得とキャッシュ、期限での取り直し、同時の呼び出し、応答に項目がないときの例外、`Query` の要求 (キー条件、`lastEvaluatedKey`、新しい順の 1 件)、読めない項目の除外を確認しています (`core` の行と分岐のカバレッジ 100%)。
 - **ビルド**: 設定が `BuildConfig` に入ります。設定がないときは空になります。
-- **実機での動作**: AWS の準備 ([AWS_DYNAMODB.md](aws_dynamodb.md)) をして、`local.properties` に書き、実機の Android 端末に入れて、起動します。実際の AWS (Cognito の ID プール、DynamoDB のテーブル、未認証ロール) に接続して、機器ごとの最新の測定値(温度、湿度、受信した時刻)が**文字列で**表示されます。手順は次の「アプリを動かして確認する」です。
+- **実機での動作**: AWS の準備 ([aws_dynamodb.md](aws_dynamodb.md)) をして、`local.properties` に書き、実機の Android 端末に入れて、起動します。実際の AWS (Cognito の ID プール、DynamoDB のテーブル、未認証ロール) に接続して、機器ごとの最新の測定値(温度、湿度、受信した時刻)が**文字列で**表示されます。手順は次の「アプリを動かして確認する」です。
 - **グラフの表示**: 温度と湿度と気圧の 3 つのグラフに機器ごとの線を重ねて表示します (気圧は、気圧センサのある機器だけ)。グラフの上の機器のボタン (`室内`、`室外` など。表示名は `thermon.nodes` で付けます) を押すと、その機器の線を出したり消したりします (最初は全て表示)。線の色は設定の順に橙、青、緑、紫で、グラフの右上の凡例と、ボタンの文字の色が同じです。縦軸は表示している線が全て入る範囲にそろいます。機器ごとの最新の測定値の 1 行はボタンの下に出ます。範囲のボタン (1 h、6 h、24 h、7 d、30 d、1 y) と、開始と終了の日付のボタン (カレンダー) で横軸と線が変わります。縦軸の値と、横軸の開始と終了の時刻 (端末のタイムゾーン) も表示します。測定値のない範囲は「No data in this range」と表示します。
 
   <a href="assets/thermon-chart.png"><img src="assets/thermon-chart.png" width="320" alt="thermon の画面 (室内と室外の温度と湿度のグラフ)"></a>
@@ -312,7 +312,7 @@ adb はホストで実行します (Docker に USB を渡す設定を避ける�
 
 ## アプリを動かして確認する
 
-AWS の準備 ([AWS_DYNAMODB.md](aws_dynamodb.md)) が終わったあとの手順です。
+AWS の準備 ([aws_dynamodb.md](aws_dynamodb.md)) が終わったあとの手順です。
 
 1. **AWS にデータが入っているか確認する** (アプリより先に)
 
@@ -320,7 +320,7 @@ AWS の準備 ([AWS_DYNAMODB.md](aws_dynamodb.md)) が終わったあとの手�
    aws dynamodb scan --region ap-northeast-1 --table-name thermo-readings --max-items 5
    ```
 
-   項目が返れば、ゲートウェイ、IoT Core、ルール、DynamoDB が動いています。空なら、[AWS_DYNAMODB.md](aws_dynamodb.md) の 5 章の「何も入らないとき」を見ます。
+   項目が返れば、ゲートウェイ、IoT Core、ルール、DynamoDB が動いています。空なら、[aws_dynamodb.md](aws_dynamodb.md) の 5 章の「何も入らないとき」を見ます。
 
 2. **`local.properties` に接続先を書く** (リポジトリの直下。コミットしない)
 
@@ -380,14 +380,14 @@ Push 時に `.github/workflows/build.yml` が開発用の Docker イメージ (D
 - **APK はアーティファクトに置きません** (ログだけを保存します)。
 - アーティファクトは `retention-days: 3` で 3 日で期限が切れます。保存する期間を変えるときは `build.yml` の `KEEP_DAYS` と、全ての `retention-days` をそろえて変えます。
 - Docker イメージはレイヤーを GitHub Actions のキャッシュに保存します (`.github/actions/docker-image`)。Gradle の依存関係と、Gradle 本体も、キャッシュに保存します (`.github/actions/gradle-cache`)。`docker-compose.yml` の `GRADLE_HOME_DIR` にキャッシュするディレクトリを指定すると、ボリューム `gradle-cache` の代わりに、そのディレクトリを使います (ローカルでは、指定しない)。
-- **GitHub Pages の設定** (最初の 1 回): リポジトリの Settings > Pages > Source を「GitHub Actions」にします。公開されるのは `core` の API ドキュメント (Dokka) です。`SETUP.md` などの Markdown の文書は含まれません。
+- **GitHub Pages の設定** (最初の 1 回): リポジトリの Settings > Pages > Source を「GitHub Actions」にします。公開されるのは `core` の API ドキュメント (Dokka) です。`docs/setup.md` などの Markdown の文書は含まれません。
 - **未検証**: GitHub Actions 上での実行 (ワークフローは YAML の構文と、`GRADLE_HOME_DIR` でのローカルの実行だけ)。最初の実行で、イメージのビルドと、Gradle の依存関係の取得に時間がかかります。
 
 ## クラウドのセッション (claude.ai/code)
 
 スマホやブラウザのクラウドのセッション (Claude Code on the web) でビルドするための設定です。クラウドの VM は通信をプロキシ経由にするので、コンテナ (Docker) の中の通信はそのままでは失敗します (curl の終了コード 60)。`scripts/cloud-docker.sh` がこれを避けます。
 
-> **状態** (2026-10-11): クラウドで `scripts/cloud-docker.sh build` と `scripts/cloud-docker.sh run build` が成功しました (APK 4.7 MB)。`test` (2 分 15 秒)、`coverage` (`core` の行と分岐が 100%)、`analyze`、`format`、`docs` も、クラウドですべて成功しました。ベースのイメージ (`ubuntu:24.04`) の取得が Docker Hub の 429 で失敗したときは `build` が Google のミラー (`mirror.gcr.io`) から取ります。
+> **状態** (2026-10-11): クラウドで `scripts/cloud-docker.sh build` と `scripts/cloud-docker.sh run build` が成功しています (APK 4.7 MB)。`test` (2 分 15 秒)、`coverage` (`core` の行と分岐が 100%)、`analyze`、`format`、`docs` も、クラウドですべて成功しています。ベースのイメージ (`ubuntu:24.04`) の取得が Docker Hub の 429 で失敗したときは `build` が Google のミラー (`mirror.gcr.io`) から取ります。
 
 ### 環境の設定 (ブラウザ)
 
@@ -436,7 +436,7 @@ scripts/cloud-docker.sh run build  # docker compose run --rm build (test, covera
 - **`buildToolsVersion` を固定する。** AGP の既定は 36.0.0 です。SDK が読み取り専用なので、入っていない版を使おうとして、失敗します。`app/build.gradle.kts` に `buildToolsVersion = "37.0.0"` を書きます。
 - **`sdkmanager` は一般ユーザーでは実行しない。** SDK が読み取り専用のためです。コンポーネントの追加は `Dockerfile` で行います。
 - **Gradle の非推奨の警告**: `--warning-mode all` を付けると、`Configuration.setVisible(boolean)` と `ReportingExtension.file(String)` の非推奨の警告が出ます。どちらも、ktlint と detekt のプラグインの内部から出るもので、このプロジェクトの記述ではありません。プラグインが更新されるまで、出続けます (Gradle 10 に上げるときに、確認します)。
-- **detekt**: 1.23.8 は Kotlin 2.4 のソースを問題なく解析できました。2.0 (`dev.detekt`) はアルファ版だけなので、使いません。
+- **detekt**: 1.23.8 は Kotlin 2.4 のソースを問題なく解析できます。2.0 (`dev.detekt`) はアルファ版だけなので、使いません。
 - **Dokka**: 2.x はタスクの名前が `dokkaGenerate` です (1.x の `dokkaHtml` ではない)。
 - **ラッパーの作成には時間がかかる** (約 1.5 分)。Gradle がプラグインの依存関係を初めて取得するためです。
 
@@ -444,10 +444,10 @@ scripts/cloud-docker.sh run build  # docker compose run --rm build (test, covera
 
 次はまだ決めていません。決まったら、このドキュメントと README に書き足します。
 
-- **AWS で読み取る範囲の使い方**: 機器ごとの最新の 1 件と、範囲 (1 時間、6 時間、24 時間) のグラフは実装しました。機器の一覧 (テーブルのキーは機器の指定が必要で、一覧はアプリの設定に持つ)、自動の更新 (今は起動したときと範囲のボタンを押したときだけ取り出す)、より長い範囲 (7 日など。件数が多いので、取り出しの分け方を決める) はこれから決めます。
+- **AWS で読み取る範囲の使い方**: 機器ごとの最新の 1 件と、範囲 (1 時間、6 時間、24 時間) のグラフは実装しています。機器の一覧 (テーブルのキーは機器の指定が必要で、一覧はアプリの設定に持つ)、自動の更新 (今は起動したときと範囲のボタンを押したときだけ取り出す)、より長い範囲 (7 日など。件数が多いので、取り出しの分け方を決める) は未定です。
 - **画面の作り方**: 通常のビュー (View) と、Canvas で描くカスタム View (`LineChartView`) にしました (ライブラリを増やさないため)。Jetpack Compose は使っていません。
 - **アプリの ID (`applicationId`) と、リリースの署名**。
-- **整形と静的解析の規則の詳細**: 今は ktlint と detekt の既定の規則に最小の設定 (`.editorconfig`、`config/detekt/detekt.yml`) だけです。Kotlin の公式のコーディング規約は [CODING_STYLE.md](coding_style.md) にリンクだけ書きました。このリポジトリ独自の規約はこれからまとめます。
+- **整形と静的解析の規則の詳細**: 今は ktlint と detekt の既定の規則に最小の設定 (`.editorconfig`、`config/detekt/detekt.yml`) だけです。Kotlin の公式のコーディング規約は [coding_style.md](coding_style.md) にリンクだけ書きました。このリポジトリ独自の規約はこれからまとめます。
 
 ## ログを見る
 

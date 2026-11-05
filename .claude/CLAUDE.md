@@ -1,9 +1,9 @@
 # プロジェクト設定
 
 Kotlin で作る Android アプリ。AWS の DynamoDB に保存された温度・湿度・気圧のデータを Cognito の ID プールの未認証ロールで読み取って、表示する (AWS のクライアント)。
-姉妹プロジェクト [esp32-thermo-system](https://github.com/sluchin/esp32-thermo-system) (ESP32 のノードとゲートウェイ) がデータを AWS IoT Core 経由で、DynamoDB に保存する。AWS 側の準備はこのリポジトリの `AWS_DYNAMODB.md`。
+姉妹プロジェクト [esp32-thermo-system](https://github.com/sluchin/esp32-thermo-system) (ESP32 のノードとゲートウェイ) がデータを AWS IoT Core 経由で、DynamoDB に保存する。AWS 側の準備はこのリポジトリの `docs/aws_dynamodb.md`。
 
-**Android Studio は使わない。** ビルド、テスト、整形、静的解析、ドキュメントの生成は全て Docker の中で、コマンドラインから実行する。環境構築の詳細と、検証の記録は `SETUP.md`。
+**Android Studio は使わない。** ビルド、テスト、整形、静的解析、ドキュメントの生成は全て Docker の中で、コマンドラインから実行する。環境構築の詳細と、検証の記録は `docs/setup.md`。
 
 ## コマンド
 
@@ -11,7 +11,7 @@ Kotlin で作る Android アプリ。AWS の DynamoDB に保存された温度�
 
 ### Docker (推奨)
 - `docker compose run` には必ず `--rm` を付ける (終わったコンテナを残さないため)。
-- `UID` と `GID` をシェルでエクスポートしておく (生成物が root 所有にならないように。`SETUP.md` の「2. ホストのユーザー ID を環境変数にエクスポートする」)。
+- `UID` と `GID` をシェルでエクスポートしておく (生成物が root 所有にならないように。`docs/setup.md` の「2. ホストのユーザー ID を環境変数にエクスポートする」)。
 - イメージのビルド: `docker compose build` (`Dockerfile` を変えたときも)
 - ビルド (デバッグ APK): `docker compose run --rm build` (`app/build/outputs/apk/debug/thermon-<版>-debug.apk`)
 - 単体テスト: `docker compose run --rm test`
@@ -21,14 +21,14 @@ Kotlin で作る Android アプリ。AWS の DynamoDB に保存された温度�
 - ドキュメント (Dokka): `docker compose run --rm docs` (`core/build/dokka/html/index.html`)
 - クリーン: `docker compose run --rm clean` (`build/`、`.gradle/`、`.kotlin/` を消す。Gradle のキャッシュは消さない)
 - 開発シェル: `docker compose run --rm dev`
-- エミュレータ (KVM。`export KVM_GID=$(getent group kvm | cut -d: -f3)` が要る。イメージは約 10.7 GB): `docker compose build emulator` → `docker compose up -d emulator` → `docker compose exec emulator scripts/emulator-wait.sh` → `docker compose exec emulator adb install -r app/build/outputs/apk/debug/thermon-*-debug.apk`。画面は <http://localhost:6080/vnc.html>、画像にするときは `adb exec-out screencap -p > build/emulator-screen.png`。止めるのは `docker compose down` (`SETUP.md` の「エミュレータ (Docker)」) (中で `./gradlew ...` を直接実行できる)
+- エミュレータ (KVM。`export KVM_GID=$(getent group kvm | cut -d: -f3)` が要る。イメージは約 10.7 GB): `docker compose build emulator` → `docker compose up -d emulator` → `docker compose exec emulator scripts/emulator-wait.sh` → `docker compose exec emulator adb install -r app/build/outputs/apk/debug/thermon-*-debug.apk`。画面は <http://localhost:6080/vnc.html>、画像にするときは `adb exec-out screencap -p > build/emulator-screen.png`。止めるのは `docker compose down` (`docs/setup.md` の「エミュレータ (Docker)」) (中で `./gradlew ...` を直接実行できる)
 
 ### 実機への転送 (ホストの adb)
-- `adb install -r app/build/outputs/apk/debug/thermon-*-debug.apk` (ホストに adb を入れる。`SETUP.md` の「実機へのインストール」と「アプリを動かして確認する」)
+- `adb install -r app/build/outputs/apk/debug/thermon-*-debug.apk` (ホストに adb を入れる。`docs/setup.md` の「実機へのインストール」と「アプリを動かして確認する」)
 
 ### クラウドのセッション (claude.ai/code) で Docker を使うとき
 
-**通常の `docker compose build` と `docker compose run` は使わない** (curl の終了コード 60 で失敗する。理由は下)。代わりに、`scripts/cloud-docker.sh` を使う (`SETUP.md` の「クラウドのセッション」)。
+**通常の `docker compose build` と `docker compose run` は使わない** (curl の終了コード 60 で失敗する。理由は下)。代わりに、`scripts/cloud-docker.sh` を使う (`docs/setup.md` の「クラウドのセッション」)。
 
 ```bash
 scripts/cloud-docker.sh build          # 開発用のイメージ (thermon-dev) を作る (プロキシと CA の設定を足す)
@@ -55,7 +55,7 @@ scripts/cloud-docker.sh start          # Docker のデーモンを起動する (
 - `app/`: Android。画面と、設定の読み込み (`BuildConfig`) だけの、薄い層。ロジックは `core` に置く (UI は単体テストの対象外)。
 - `gradle/libs.versions.toml`: ライブラリとプラグインの版 (版カタログ)。版を変えるときはここだけ。
 - `config/detekt/detekt.yml`: detekt の規則 (既定に上書きするものだけ)。
-- `Dockerfile` (2 段: dev と emulator) / `docker-compose.yml` / `scripts/` (エミュレータの起動と待ち合わせ、クラウドのセッションで Docker を使う補助 `cloud-docker.sh`、Maven のミラーの設定): 開発環境。`.github/`: GitHub Actions。`SETUP.md`: 環境構築と、検証の記録。
+- `Dockerfile` (2 段: dev と emulator) / `docker-compose.yml` / `scripts/` (エミュレータの起動と待ち合わせ、クラウドのセッションで Docker を使う補助 `cloud-docker.sh`、Maven のミラーの設定): 開発環境。`.github/`: GitHub Actions。`docs/setup.md`: 環境構築と、検証の記録。
 
 ## AWS の設定と、秘密情報
 
@@ -74,7 +74,7 @@ scripts/cloud-docker.sh start          # Docker のデーモンを起動する (
 
 ## コーディング規約
 
-ktlint (Kotlin 公式のスタイル) と、detekt (既定の規則) に従う。迷ったら、ツールが正しい。Kotlin 公式のコーディング規約の日本語訳と、このプロジェクトでの違いは `CODING_STYLE.md`。
+ktlint (Kotlin 公式のスタイル) と、detekt (既定の規則) に従う。迷ったら、ツールが正しい。Kotlin 公式のコーディング規約の日本語訳と、このプロジェクトでの違いは `docs/coding_style.md`。
 
 - **インデントは空白 4 つ。1 行は 100 桁まで** (`.editorconfig`)。整形は `format-fix` が行う (手で、整形しない)。
 - **ファイルの先頭に著作権とライセンスを書く**:
@@ -98,7 +98,7 @@ ktlint (Kotlin 公式のスタイル) と、detekt (既定の規則) に従う�
 
 ## 開発フロー
 
-1. Push 時に GitHub Actions (`.github/workflows/build.yml`) が開発用の Docker イメージ (ローカルと同じ環境) で `docker compose` のサービスを実行する (`SETUP.md` の「CI (GitHub Actions)」)。
+1. Push 時に GitHub Actions (`.github/workflows/build.yml`) が開発用の Docker イメージ (ローカルと同じ環境) で `docker compose` のサービスを実行する (`docs/setup.md` の「CI (GitHub Actions)」)。
    - `check` ジョブ: `build` / `test` / `coverage` / `format` / `analyze` をサービスごとに実行する。失敗したら、ジョブが失敗する。実行のログをアーティファクト (`<サービス名>_log`。`build_log` など) として保存する (失敗したときも保存する)。**APK はアーティファクトに置かない。**
    - `docs` ジョブ: `docs` (Dokka の HTML。警告があれば失敗する)。生成したドキュメントをアーティファクト `docs` と、ログ `docs_log` に保存する。
    - `deploy-docs` ジョブ: main への push のときだけ、ドキュメントを GitHub Pages に公開する (リポジトリの Settings > Pages > Source を「GitHub Actions」にしておく)。
@@ -118,9 +118,9 @@ ktlint (Kotlin 公式のスタイル) と、detekt (既定の規則) に従う�
   6. `docker compose run --rm build` (APK のビルド)
   7. `docker compose run --rm docs` (ドキュメント。KDoc を変えたときは必ず)
 - ビルドや、テストを実行できなかったときはそのことを報告する (成功したとは書かない)。
-- **例外**: 変更が `SETUP.md`、`README.md`、`.claude/CLAUDE.md` などの文書だけの場合はビルドしない。
-- ビルドやコマンド、ツールの版を変えたら、`SETUP.md` も更新する (版は実際に使うものだけを書く)。
-- ファイルを追加したら、Gradle の設定 (`build.gradle.kts`) と、必要なら、`SETUP.md` の構成も更新する。
+- **例外**: 変更が `docs/setup.md`、`README.md`、`.claude/CLAUDE.md` などの文書だけの場合はビルドしない。
+- ビルドやコマンド、ツールの版を変えたら、`docs/setup.md` も更新する (版は実際に使うものだけを書く)。
+- ファイルを追加したら、Gradle の設定 (`build.gradle.kts`) と、必要なら、`docs/setup.md` の構成も更新する。
 
 ### タスク完了時の動作
 
@@ -137,7 +137,7 @@ ktlint (Kotlin 公式のスタイル) と、detekt (既定の規則) に従う�
 - **時刻と乱数**: 外の状態は引数で渡して、固定する (`CognitoUnauthenticatedCredentials` の `now` のように)。実際の時計を使う動作は別に 1 つだけ、テストする。
 - **実機と AWS での確認は別に必要**: 実際の AWS への接続 (ID プール、テーブル、権限)、画面の表示、実機へのインストールは単体テストでは確認できない (画面を変えたら、実機でも見る)。
 
-## 落とし穴 (検証で分かったこと。詳細は SETUP.md)
+## 落とし穴 (検証で分かったこと。詳細は docs/setup.md)
 
 - `compileSdk` は 37 以上 (AWS SDK が使う OkHttp 5.5 の要求)。`buildToolsVersion` は `37.0.0` に固定する (コンテナの SDK は読み取り専用)。足りない SDK のコンポーネントは `Dockerfile` に足して、イメージを作り直す。
 - `.gitignore` は `*.jar` を無視する。Gradle ラッパーの `gradle-wrapper.jar` だけ、例外にしてある。
@@ -174,3 +174,4 @@ ktlint (Kotlin 公式のスタイル) と、detekt (既定の規則) に従う�
 ## 開発ルール
 
 - Markdown (`*.md`) の日本語の文章は、句読点に「、」「。」を使う (「,」「.」は使わない)。インラインコード・コードブロック・URL・ファイル名・数値 (`1.2.0`、`1,000`) は対象外。見出しや番号付きリストの「1.」の形は変えない。`docs/` の生成物と、この `CLAUDE.md` は対象外。
+- Markdown (`*.md`。この `CLAUDE.md` を除く) には、AI の目線の記述を書かない。読み手 (人) に向けて、事実、仕様、手順だけを書く。「承認されたら実装します」「教えてください」「提案します」のような、AI からの依頼や約束、作業の報告、「Claude が」のような書き手の記述は、会話で伝えて、ファイルには残さない。

@@ -4,7 +4,7 @@ AWS IoT Core に届いた温度・湿度・気圧・電池残量を DynamoDB に
 
 > **注意**: この手順は AWS のドキュメントに基づいて書いたものです。AWS の画面、料金、サービスの提供状況は変わることがあるので、最新の情報を確認してください。
 
-AWS CLI をまだ使えるようにしていないときは先に [AWS_CLI.md](aws_cli.md) の手順を行います (CLI のインストール、認証情報の設定、アカウント ID の確認)。
+AWS CLI をまだ使えるようにしていないときは先に [aws_cli.md](aws_cli.md) の手順を行います (CLI のインストール、認証情報の設定、アカウント ID の確認)。
 
 ## 1. 構成
 
@@ -103,7 +103,7 @@ TABLE=thermo-readings
 echo "$ACCOUNT_ID"
 ```
 
-- 出力が出ないときは [AWS_CLI.md](aws_cli.md) の設定が終わっていません。
+- 出力が出ないときは [aws_cli.md](aws_cli.md) の設定が終わっていません。
 - 以降で作る JSON ファイル (`iot-*.json`、`rule-*.json`、`unauth-*.json`) にはアカウント ID などが入ります。リポジトリの外 (`~/tmp` など) で実行すると、ファイルが残りません。リポジトリの中で実行したときは `.gitignore` が無視します。**コミットしません。**
 - アカウント ID はパスワードではありませんが、公開する必要もありません。リポジトリには書かないでください。
 
@@ -301,11 +301,11 @@ thermon.nodes=<機器の MAC アドレス (コンマ区切り)>
 
 ### 7.1 気圧を表示する
 
-Thermo ノードに気圧センサを付けると (esp32-thermo-system の `SETUP.md` の「Thermo ノードのセンサ」)、項目に `pressure_hpa` が増えます。**AWS 側の設定は変えません** (ルールは `SELECT *`、テーブルはキーのほかの属性を決めない、未認証ロールの権限は `dynamodb:Query` だけで属性によらない)。
+Thermo ノードに気圧センサを付けると (esp32-thermo-system の `docs/setup.md` の「Thermo ノードのセンサ」)、項目に `pressure_hpa` が増えます。**AWS 側の設定は変えません** (ルールは `SELECT *`、テーブルはキーのほかの属性を決めない、未認証ロールの権限は `dynamodb:Query` だけで属性によらない)。
 
 - thermon は `pressure_hpa` を読んで、最新の値の 1 行 (`1013.2 hPa`) と、気圧のグラフ (`Pressure`) に出します。気圧のない機器 (SwitchBot、DHT11 のノード) は、気圧のグラフに線が出ません。
 - 端末に保存した測定値 (SQLite) にも、気圧の列を足しました (データベースの版 2)。アプリを更新すると、保存してあった測定値は消さずに、列だけを足します (それまでの測定値の気圧は、なし)。
-- 気圧が届いているかは、esp32-thermo-system の `AWS_SETUP.md` の 8.1 のコマンドで確かめます。
+- 気圧が届いているかは、esp32-thermo-system の `docs/aws_setup.md` の 8.1 のコマンドで確かめます。
 
 ## 8. これから
 
