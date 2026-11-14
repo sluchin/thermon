@@ -89,7 +89,7 @@ class CognitoUnauthenticatedCredentialsTest {
             }
     }
 
-    /** ID と認証情報を, ID プールから取って, 認証情報を返す. */
+    /** ID と認証情報を, ID プールから取って認証情報を返す. */
     @Test
     fun resolveFetchesIdentityAndCredentials() =
         runTest {
@@ -147,7 +147,7 @@ class CognitoUnauthenticatedCredentialsTest {
             ) { client.getCredentialsForIdentity(any<GetCredentialsForIdentityRequest>()) }
         }
 
-    /** 同時に呼ばれても, 取得は 1 回だけで, 同じ認証情報を返す. */
+    /** 同時に呼ばれても, 取得は 1 回だけで同じ認証情報を返す. */
     @Test
     fun resolveFetchesOnceForConcurrentCalls() =
         runTest {
@@ -230,7 +230,7 @@ class CognitoUnauthenticatedCredentialsTest {
             assertEquals("AK0", credentials.accessKeyId)
         }
 
-    /** 時計を渡さないときは, 実際の時刻 (Instant.now()) で, 期限を判断する. */
+    /** 時計を渡さないときは, 実際の時刻 (Instant.now()) で期限を判断する. */
     @Test
     fun resolveUsesTheSystemClockByDefault() =
         runTest {

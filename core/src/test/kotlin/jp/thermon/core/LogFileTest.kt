@@ -25,7 +25,7 @@ class LogFileTest {
         dir.deleteRecursively()
     }
 
-    /** 1 行目に日時, 重大度, タグ, 内容. 例外は, 次の行からスタックトレース. */
+    /** 1 行目に日時, 重大度, タグ, 内容. 例外は次の行からスタックトレース. */
     @Test
     fun formatLogEntryWithAndWithoutError() {
         val time = ZonedDateTime.parse("2026-10-21T08:12:03.045Z")
@@ -50,7 +50,7 @@ class LogFileTest {
         assertTrue(text.endsWith(")\n"))
     }
 
-    /** 1 件ずつに分けて, 続きの行は前の件に付ける. 最初の行が続きなら, 日時のない件にする. */
+    /** 1 件ずつに分けて, 続きの行は前の件に付ける. 最初の行が続きなら日時のない件にする. */
     @Test
     fun parseLogJoinsContinuationLines() {
         val text =
@@ -144,7 +144,7 @@ class LogFileTest {
         assertEquals("old\nline1\nb\nc\n", log.readTail(100))
     }
 
-    /** ファイルがなければ, 空. 消すと, 古いファイルも消える. */
+    /** ファイルがなければ空. 消すと, 古いファイルも消える. */
     @Test
     fun readTailAndClear() {
         val log = RotatingLogFile(File(dir, "app.log"), maxBytes = 100, maxBackups = 2)

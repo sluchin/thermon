@@ -47,7 +47,7 @@ class FakeStore(
  * 試験用の AWS の入り口 (取り出しの引数を記録する).
  *
  * @property readings [range] が返す測定値
- * @property failure 取り出しで投げる例外 (null なら, 投げない)
+ * @property failure 取り出しで投げる例外 (null なら投げない)
  */
 class FakeRemote(
     private val readings: List<Reading>,
@@ -123,7 +123,7 @@ class ReadingStoreTest {
         assertEquals(listOf(readings[0], readings[2], readings[3]), selectToStore(readings, null))
     }
 
-    /** 保存したものと同じ値なら, 保存しない. 1 時間 (ちょうど) たったら, 同じ値でも保存する. */
+    /** 保存したものと同じ値なら, 保存しない. 1 時間 (ちょうど) たったら同じ値でも保存する. */
     @Test
     fun selectKeepsHeartbeat() {
         val last = sample(0, 20.0)

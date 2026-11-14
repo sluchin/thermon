@@ -17,7 +17,7 @@ class TemperatureTest {
         assertEquals("23.5 C", formatTemperature(235))
     }
 
-    /** 0 ℃ 未満の温度は, 整数部が 0 でも, 符号を付けて表示する. */
+    /** 0 ℃ 未満の温度は, 整数部が 0 でも符号を付けて表示する. */
     @Test
     fun formatTemperatureNegative() {
         assertEquals("-0.5 C", formatTemperature(-5))

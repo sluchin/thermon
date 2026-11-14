@@ -104,7 +104,7 @@ app/                             Android (画面だけの薄い層. 設定の読
   ReadingStore                   端末に保存した測定値の入り口と, 保存する測定値の選び方 (selectToStore), AWS との同期 (syncReadings)
   MainActivity                   画面 (RangeBar と, ChartsPanel)
   RangeBar, SqliteReadingStore   範囲 (近道のボタンと開始・終了の日付) を選ぶ部品, 端末の SQLite の保存先
-  OutdoorAlertWorker             室外の通知 (WorkManager。15 分ごと。温度 0 ℃ 未満, 湿度 80 % 超)
+  OutdoorAlertWorker             室外の通知 (WorkManager. 15 分ごと. 温度 0 ℃ 未満, 湿度 80 % 超)
   ChartsPanel, LineChartView     機器のボタンと 2 つのグラフ, 折れ線グラフ (Canvas. ライブラリなし. 複数の線を重ねる)
 ```
 
@@ -136,9 +136,9 @@ docker compose run --rm analyze
 docker compose run --rm clean
 ```
 
-Gradle のキャッシュ (依存関係のダウンロード) も消すときは `docker compose down -v` でボリューム `gradle-cache` を消します (次の実行で、ダウンロードし直します)。
+Gradle のキャッシュ (依存関係のダウンロード) も消すときは `docker compose down -v` でボリューム `gradle-cache` を消します (次の実行でダウンロードし直します)。
 
-コードを修正したら、`format-fix`、`format`、`analyze`、`test`、`coverage`、`build` の順に全て通ることを確認します (CI も、同じサービスを実行します。「CI (GitHub Actions)」)。
+コードを修正したら、`format-fix`、`format`、`analyze`、`test`、`coverage`、`build` の順に全て通ることを確認します (CI も同じサービスを実行します。「CI (GitHub Actions)」)。
 
 ### Gradle のタスクを直接実行する
 
@@ -159,7 +159,7 @@ Gradle のキャッシュ (依存関係のダウンロード) も消すときは
 - **ktlint**: 整形が崩れていると、`ktlintCheck` が失敗して (終了コード 1)、ファイルの場所と、理由を表示します。`ktlintFormat` で自動で直ります。直したあとの `ktlintCheck` は成功します。
 - **detekt**: 設定は `buildUponDefaultConfig = true` (既定の規則)。マジックナンバーなども、検出します (検証では、サンプルのコードの数字を検出した)。設定は `config/detekt/detekt.yml` に足します (今は `maxIssues: 0` だけ)。
 - **Android Lint**: `lint { warningsAsErrors = true; abortOnError = true }` で警告もエラーにします。検証では、`targetSdk` が最新でないこと、アプリのアイコンがないこと、バックアップの設定 (`dataExtractionRules` と `fullBackupContent`) がないことを検出しました。
-- **Kotlin のコンパイラ**: `allWarningsAsErrors` を `true` にして、警告をエラーにします。検証では、非推奨の関数を呼ぶと、`warnings found and -Werror specified` でビルドが失敗しました。なお、未使用の変数は Kotlin のコンパイラの警告にはなりません (IDE の検査で、コンパイラは出しません)。
+- **Kotlin のコンパイラ**: `allWarningsAsErrors` を `true` にして、警告をエラーにします。検証では、非推奨の関数を呼ぶと、`warnings found and -Werror specified` でビルドが失敗しました。なお、未使用の変数は Kotlin のコンパイラの警告にはなりません (IDE の検査でコンパイラは出しません)。
 - **Dokka**: `reportUndocumented` を有効にして、`failOnWarning` を `true` にしています。KDoc のない公開の関数があると、`Undocumented` の警告で、`docs` が失敗します。
 - **JaCoCo**: `jacocoTestCoverageVerification` に行 (`LINE`) と分岐 (`BRANCH`) の最小値を 1.0 (100%) とする規則を置きます。UI の層 (`app`) は対象外です (薄い層にする)。
 
@@ -192,7 +192,7 @@ AWS 側の準備 (テーブル `thermo-readings`、IoT のルール、ID プー�
 接続先はリポジトリに入れません。`local.properties` (コミットしない) に書くか、Gradle のプロパティ (`-Pthermon.table=...`) で渡します。ビルドのときに、`BuildConfig` に入ります。
 
 ```properties
-# local.properties (リポジトリの直下。.gitignore で無視する)
+# local.properties (リポジトリの直下. .gitignore で無視する)
 thermon.region=ap-northeast-1
 thermon.identityPoolId=ap-northeast-1:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 thermon.table=thermo-readings
@@ -215,7 +215,7 @@ thermon.nodes=AA:BB:CC:DD:EE:01=室外,AA:BB:CC:DD:EE:02=室内
 - **単体テスト**: Cognito と DynamoDB のクライアントを MockK で偽物にして、認証情報の取得とキャッシュ、期限での取り直し、同時の呼び出し、応答に項目がないときの例外、`Query` の要求 (キー条件、`lastEvaluatedKey`、新しい順の 1 件)、読めない項目の除外を確認しています (`core` の行と分岐のカバレッジ 100%)。
 - **ビルド**: 設定が `BuildConfig` に入ります。設定がないときは空になります。
 - **実機での動作**: AWS の準備 ([aws_dynamodb.md](aws_dynamodb.md)) をして、`local.properties` に書き、実機の Android 端末に入れて、起動します。実際の AWS (Cognito の ID プール、DynamoDB のテーブル、未認証ロール) に接続して、機器ごとの最新の測定値(温度、湿度、受信した時刻)が**文字列で**表示されます。手順は次の「アプリを動かして確認する」です。
-- **グラフの表示**: 温度と湿度と気圧の 3 つのグラフに機器ごとの線を重ねて表示します (気圧は、気圧センサのある機器だけ)。グラフの上の機器のボタン (`室内`、`室外` など。表示名は `thermon.nodes` で付けます) を押すと、その機器の線を出したり消したりします (最初は全て表示)。線の色は設定の順に橙、青、緑、紫で、グラフの右上の凡例と、ボタンの文字の色が同じです。縦軸は表示している線が全て入る範囲にそろいます。機器ごとの最新の測定値の 1 行はボタンの下に出ます。範囲のボタン (1 h、6 h、24 h、7 d、30 d、1 y) と、開始と終了の日付のボタン (カレンダー) で横軸と線が変わります。縦軸の値と、横軸の開始と終了の時刻 (端末のタイムゾーン) も表示します。測定値のない範囲は「No data in this range」と表示します。
+- **グラフの表示**: 温度と湿度と気圧の 3 つのグラフに機器ごとの線を重ねて表示します (気圧は気圧センサのある機器だけ)。グラフの上の機器のボタン (`室内`、`室外` など。表示名は `thermon.nodes` で付けます) を押すと、その機器の線を出したり消したりします (最初は全て表示)。線の色は設定の順に橙、青、緑、紫で、グラフの右上の凡例と、ボタンの文字の色が同じです。縦軸は表示している線が全て入る範囲にそろいます。機器ごとの最新の測定値の 1 行はボタンの下に出ます。範囲のボタン (1 h、6 h、24 h、7 d、30 d、1 y) と、開始と終了の日付のボタン (カレンダー) で横軸と線が変わります。縦軸の値と、横軸の開始と終了の時刻 (端末のタイムゾーン) も表示します。測定値のない範囲は「No data in this range」と表示します。
 
   <a href="assets/thermon-chart.png"><img src="assets/thermon-chart.png" width="320" alt="thermon の画面 (室内と室外の温度と湿度のグラフ)"></a>
 
@@ -331,9 +331,9 @@ AWS の準備 ([aws_dynamodb.md](aws_dynamodb.md)) が終わったあとの手�
    thermon.nodes=<機器の MAC アドレス (コンマ区切り)>
    ```
 
-   `thermon.nodes` は DynamoDB の `node` と、**同じ MAC アドレス** (大文字・小文字も、コロンも同じ) にします。`<MAC アドレス>=室外` のように、表示名を付けられます (例: `thermon.nodes=ED:2E:C4:46:3B:11=室外,00:AA:01:00:00:42=室内`)。
+   `thermon.nodes` は DynamoDB の `node` と、**同じ MAC アドレス** (大文字・小文字もコロンも同じ) にします。`<MAC アドレス>=室外` のように、表示名を付けられます (例: `thermon.nodes=ED:2E:C4:46:3B:11=室外,00:AA:01:00:00:42=室内`)。
 
-3. **ビルドする** (値を変えたら、ビルドし直す)
+3. **ビルドする** (値を変えたらビルドし直す)
 
    ```bash
    docker compose run --rm build
@@ -341,7 +341,7 @@ AWS の準備 ([aws_dynamodb.md](aws_dynamodb.md)) が終わったあとの手�
 
    APK は `app/build/outputs/apk/debug/thermon-<版>-debug.apk` にできます。
 
-4. **端末に入れる** (前の節の手順で、USB デバッグを有効にして、接続しておく)
+4. **端末に入れる** (前の節の手順で、USB デバッグを有効にして接続しておく)
 
    ```bash
    adb install -r app/build/outputs/apk/debug/thermon-*-debug.apk
@@ -354,7 +354,7 @@ AWS の準備 ([aws_dynamodb.md](aws_dynamodb.md)) が終わったあとの手�
 
 6. **表示を確認する**
    - 正常なら、画面の上に範囲を選ぶボタン (1 h、6 h、24 h、7 d、30 d、1 y。選んでいるボタンは薄く表示される。既定は 6 h) と、開始と終了の日付のボタン (最初は未設定の `-`) と、日付を消す `Clear` のボタンが出ます。その下に機器を選ぶボタンと、機器ごとの最新の温度、湿度、気圧、受信した時刻の 1 行と、温度と湿度と気圧のグラフが出ます。ボタンを押すと、その範囲で取り出し直します (取り出している間は「Loading…」)。
-   - 「AWS is not configured」と出るなら、`thermon.identityPoolId` か `thermon.nodes` が空です。直して、ビルドし直します。
+   - 「AWS is not configured」と出るなら、`thermon.identityPoolId` か `thermon.nodes` が空です。直してビルドし直します。
 
 うまくいかないとき:
 
@@ -379,7 +379,7 @@ Push 時に `.github/workflows/build.yml` が開発用の Docker イメージ (D
 - 実行するのは `main` と `ccr-*` ブランチへの push と、main への PR です。
 - **APK はアーティファクトに置きません** (ログだけを保存します)。
 - アーティファクトは `retention-days: 3` で 3 日で期限が切れます。保存する期間を変えるときは `build.yml` の `KEEP_DAYS` と、全ての `retention-days` をそろえて変えます。
-- Docker イメージはレイヤーを GitHub Actions のキャッシュに保存します (`.github/actions/docker-image`)。Gradle の依存関係と、Gradle 本体も、キャッシュに保存します (`.github/actions/gradle-cache`)。`docker-compose.yml` の `GRADLE_HOME_DIR` にキャッシュするディレクトリを指定すると、ボリューム `gradle-cache` の代わりに、そのディレクトリを使います (ローカルでは、指定しない)。
+- Docker イメージはレイヤーを GitHub Actions のキャッシュに保存します (`.github/actions/docker-image`)。Gradle の依存関係と、Gradle 本体も、キャッシュに保存します (`.github/actions/gradle-cache`)。`docker-compose.yml` の `GRADLE_HOME_DIR` にキャッシュするディレクトリを指定すると、ボリューム `gradle-cache` の代わりに、そのディレクトリを使います (ローカルでは指定しない)。
 - **GitHub Pages の設定** (最初の 1 回): リポジトリの Settings > Pages > Source を「GitHub Actions」にします。公開されるのは `core` の API ドキュメント (Dokka) です。`docs/setup.md` などの Markdown の文書は含まれません。
 - **未検証**: GitHub Actions 上での実行 (ワークフローは YAML の構文と、`GRADLE_HOME_DIR` でのローカルの実行だけ)。最初の実行で、イメージのビルドと、Gradle の依存関係の取得に時間がかかります。
 
@@ -444,7 +444,7 @@ scripts/cloud-docker.sh run build  # docker compose run --rm build (test, covera
 
 次はまだ決めていません。決まったら、このドキュメントと README に書き足します。
 
-- **AWS で読み取る範囲の使い方**: 機器ごとの最新の 1 件と、範囲 (1 時間、6 時間、24 時間) のグラフは実装しています。機器の一覧 (テーブルのキーは機器の指定が必要で、一覧はアプリの設定に持つ)、自動の更新 (今は起動したときと範囲のボタンを押したときだけ取り出す)、より長い範囲 (7 日など。件数が多いので、取り出しの分け方を決める) は未定です。
+- **AWS で読み取る範囲の使い方**: 機器ごとの最新の 1 件と、範囲 (1 時間、6 時間、24 時間) のグラフは実装しています。機器の一覧 (テーブルのキーは機器の指定が必要で、一覧はアプリの設定に持つ)、自動の更新 (今は起動したときと範囲のボタンを押したときだけ取り出す)、より長い範囲 (7 日など。件数が多いので取り出しの分け方を決める) は未定です。
 - **画面の作り方**: 通常のビュー (View) と、Canvas で描くカスタム View (`LineChartView`) にしました (ライブラリを増やさないため)。Jetpack Compose は使っていません。
 - **アプリの ID (`applicationId`) と、リリースの署名**。
 - **整形と静的解析の規則の詳細**: 今は ktlint と detekt の既定の規則に最小の設定 (`.editorconfig`、`config/detekt/detekt.yml`) だけです。Kotlin の公式のコーディング規約は [coding_style.md](coding_style.md) にリンクだけ書きました。このリポジトリ独自の規約はこれからまとめます。
@@ -454,13 +454,13 @@ scripts/cloud-docker.sh run build  # docker compose run --rm build (test, covera
 アプリのログは、Android の logcat に出ます (`app/src/main/kotlin/jp/thermon/app/AppLog.kt`)。タグは機能ごとです (`Readings`、`Alert`)。
 
 ```bash
-# エミュレータ (Docker) のログを、タグで絞って見る (D はデバッグ以上)
+# エミュレータ (Docker) のログを, タグで絞って見る (D はデバッグ以上)
 docker compose exec emulator adb logcat -s Readings:D Alert:D AndroidRuntime:E
 # 実機 (USB でつなぐ) なら
 adb logcat -s Readings:D Alert:D AndroidRuntime:E
 ```
 
-- デバッグのログ (`AppLog.d`) は、デバッグ版 (`assembleDebug`) だけで出ます。リリース版では、情報 (`AppLog.i`)、警告 (`AppLog.w`)、エラー (`AppLog.e`) だけが出ます。
+- デバッグのログ (`AppLog.d`) は、デバッグ版 (`assembleDebug`) だけで出ます。リリース版では情報 (`AppLog.i`)、警告 (`AppLog.w`)、エラー (`AppLog.e`) だけが出ます。
 - アプリが落ちたときの例外は、`AndroidRuntime` のタグで出ます。
-- **アプリの中で見る**: ログはアプリのファイル (`files/logs/app.log`。1 MB で切り替えて、古いものを 3 つ残す) にも書きます。落ちたときの例外も書きます。メニューの「Log」で、新しい順に見て、重大度で絞り込めます。「Save」で Android の保存の画面 (Google Drive も選べる) に保存し、「Share」でメールなどに送り、「Clear」で消します。PC がなくても見られます。
+- **アプリの中で見る**: ログはアプリのファイル (`files/logs/app.log`。1 MB で切り替えて古いものを 3 つ残す) にも書きます。落ちたときの例外も書きます。メニューの「Log」で、新しい順に見て重大度で絞り込めます。「Save」で Android の保存の画面 (Google Drive も選べる) に保存し、「Share」でメールなどに送り、「Clear」で消します。PC がなくても見られます。
 - Google Play で公開したら、落ちたときの例外と ANR (応答なし) は、Play Console の「Android Vitals」に集まります (アプリのコードは要りません。利用者が、使用状況と診断情報の送信を許可している端末から、集まります)。リリース版で R8 の難読化を有効にしたら、Play Console に、対応表 (`mapping.txt`) を上げると、例外の場所が読めます。

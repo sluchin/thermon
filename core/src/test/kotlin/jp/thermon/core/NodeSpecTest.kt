@@ -35,7 +35,7 @@ class NodeSpecTest {
         assertEquals("室外 (ED:2E:C4:46:3B:11)", nodes[0].title)
     }
 
-    /** 前後の空白と, 空の項目と, 識別子のない項目は, 除く. 表示名が空なら, 表示名なし. */
+    /** 前後の空白と, 空の項目と, 識別子のない項目は, 除く. 表示名が空なら表示名なし. */
     @Test
     fun parseNodesSkipsBlankItems() {
         val nodes = parseNodes(" AA:01 = 室外 ,, =室内,AA:02=, ")

@@ -9,7 +9,7 @@ package jp.thermon.app
 import android.content.Context
 
 /**
- * dp を, 画面の密度に合わせて, px にする.
+ * dp を, 画面の密度に合わせて px にする.
  *
  * @receiver コンテキスト
  * @param value dp

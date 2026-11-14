@@ -36,7 +36,7 @@ private const val TAG = "LogScreen"
 /** 画面に出す, ログの末尾の最大 (バイト). */
 private const val SHOW_BYTES = 256L * 1024L
 
-/** 保存する, ログの最大 (バイト. 古いファイルも含めて, 全部). */
+/** 保存する, ログの最大 (バイト. 古いファイルも含めて全部). */
 private const val SAVE_BYTES = 8L * 1024L * 1024L
 
 /** 共有 (メールなど) で送る, ログの末尾の最大 (文字. Android の受け渡しの上限より小さくする). */
@@ -73,7 +73,7 @@ class LogActivity : Activity() {
     private var minimum = LEVEL_CHOICES.first().second
 
     /**
-     * 画面を作って, ログを読む.
+     * 画面を作ってログを読む.
      *
      * @param savedInstanceState 保存した状態
      */
@@ -154,7 +154,7 @@ class LogActivity : Activity() {
             setOnClickListener { onClick() }
         }
 
-    /** ログを読み直して, 絞り込んで, 新しい順に出す. */
+    /** ログを読み直して, 絞り込んで新しい順に出す. */
     private fun reload() {
         val file = AppLog.logFile() ?: return
         val level = minimum
@@ -182,7 +182,7 @@ class LogActivity : Activity() {
     }
 
     /**
-     * 保存の画面で選んだ場所に, ログ (古いファイルも含めて, 全部) を書く.
+     * 保存の画面で選んだ場所に, ログ (古いファイルも含めて全部) を書く.
      *
      * @param requestCode 開いた画面の番号
      * @param resultCode 結果

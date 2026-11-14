@@ -102,7 +102,7 @@ fun parseLog(text: String): List<LogEntry> {
             val last = entries.removeAt(entries.lastIndex)
             entries += last.copy(message = last.message + "\n" + line)
         } else if (line.isNotEmpty()) {
-            // ファイルの最初が, 前の件の続きのとき (読む量の上限で, 切れたとき)
+            // ファイルの最初が, 前の件の続きのとき (読む量の上限で切れたとき)
             entries += LogEntry("", LogLevel.INFO, "", line)
         }
     }
@@ -111,7 +111,7 @@ fun parseLog(text: String): List<LogEntry> {
 }
 
 /**
- * 重大度で, ログを絞り込む.
+ * 重大度でログを絞り込む.
  *
  * @param entries ログ
  * @param minimum 出す, 最も低い重大度
@@ -142,9 +142,9 @@ fun renderLog(entries: List<LogEntry>): String =
  * 大きさが上限を超えたら, 次のファイルに切り替えて書く, ログファイル.
  *
  * 切り替えたら, 今のファイルを `<名前>.1` にし, それまでの `.1` を `.2` に, というように送る.
- * 古いファイルは, [maxBackups] 個まで残す. 複数のスレッドから呼べる (どれも, 同期する).
+ * 古いファイルは, [maxBackups] 個まで残す. 複数のスレッドから呼べる (どれも同期する).
  *
- * @property file ログファイル (切り替えても, 変わらない)
+ * @property file ログファイル (切り替えても変わらない)
  * @property maxBytes 1 つのファイルの上限 (バイト)
  * @property maxBackups 残す, 古いファイルの数
  */
@@ -196,7 +196,7 @@ class RotatingLogFile(
      * 上限を超える分は, 古い方から捨てる. 途中で切った最初の行は, 行の途中からになるので, 捨てる.
      *
      * @param limit 返す最大のバイト数
-     * @return ログの文字列 (ファイルがなければ, 空)
+     * @return ログの文字列 (ファイルがなければ空)
      * @throws java.io.IOException 読めないとき
      */
     @Synchronized

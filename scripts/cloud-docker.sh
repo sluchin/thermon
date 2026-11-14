@@ -1,7 +1,7 @@
 #!/bin/bash
 # クラウドのセッション (claude.ai/code) で, Docker を使うための補助.
 #
-#   scripts/cloud-docker.sh start        Docker のデーモン (dockerd) を起動する (起動済みなら, 何もしない)
+#   scripts/cloud-docker.sh start        Docker のデーモン (dockerd) を起動する (起動済みなら何もしない)
 #   scripts/cloud-docker.sh hook         SessionStart フック用. クラウドのときだけ, start する
 #   scripts/cloud-docker.sh build        開発用のイメージ (thermon-dev) を, プロキシと CA の設定を足して作る
 #   scripts/cloud-docker.sh run <引数>   docker compose run --rm <引数> を, プロキシの設定を足して実行する
@@ -22,7 +22,7 @@
 # ローカルや CI では, 使わない (プロキシの設定が, ないとき: ビルドは, 通常どおり).
 #
 # build は, ベースのイメージ (ubuntu:26.04) を, Docker Hub から取る. 429 (回数制限) で失敗したときは,
-# Google のミラー (mirror.gcr.io) から取って, 元のタグを付ける.
+# Google のミラー (mirror.gcr.io) から取って元のタグを付ける.
 #
 # 環境変数 (省略可): THERMON_IMAGE (イメージの名前. 既定は thermon-dev:latest),
 # CLOUD_CA_BUNDLE (プロキシの CA の束. 既定は SSL_CERT_FILE, なければ /root/.ccr/ca-bundle.crt),
@@ -88,7 +88,7 @@ prepare_gradle_home() {
     fi
 }
 
-# Dockerfile のベースのイメージ (最初の FROM) が, なければ, 取得する. Docker Hub が 429 (回数制限) を
+# Dockerfile のベースのイメージ (最初の FROM) が, なければ取得する. Docker Hub が 429 (回数制限) を
 # 返すときは, Google のミラー (mirror.gcr.io) から取って, 元の名前のタグを付ける
 ensure_base_image() {
     local root="$1" base mirror

@@ -65,7 +65,7 @@ class NodeSnapshotTest {
         )
     }
 
-    /** 保存した測定値が 1 件もなければ, 最新の測定値も, グラフもない. */
+    /** 保存した測定値が 1 件もなければ, 最新の測定値もグラフもない. */
     @Test
     fun loadStoredSnapshotWithoutReadings() {
         val snapshot = loadStoredSnapshot(FakeStore(), NODE, WINDOW)
@@ -88,7 +88,7 @@ class NodeSnapshotTest {
             assertNull(snapshot.humidity)
         }
 
-    /** 気圧があれば, 気圧のグラフを作る. 気圧のない機器 (SwitchBot など) は, 作らない. */
+    /** 気圧があれば気圧のグラフを作る. 気圧のない機器 (SwitchBot など) は, 作らない. */
     @Test
     fun loadSnapshotBuildsPressureChart() =
         runTest {
@@ -150,7 +150,7 @@ class NodeSnapshotTest {
     fun loadSnapshotHoldsValueToBothEnds() =
         runTest {
             val stored = sample(NOW - 400, 13.8, 45.0)
-            // 保存した最後の測定値のあとに, 同じ値の測定値が届いている (変わらないので, 保存しない)
+            // 保存した最後の測定値のあとに, 同じ値の測定値が届いている (変わらないので保存しない)
             val remote = FakeRemote(listOf(sample(NOW - 10, 13.8, 45.0)))
             val store = FakeStore(mutableListOf(sample(NOW - 4000, 13.8, 46.0), stored))
 

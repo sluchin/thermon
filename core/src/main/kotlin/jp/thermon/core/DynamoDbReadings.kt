@@ -92,7 +92,7 @@ class DynamoDbReadings(
 /**
  * DynamoDB の 1 件を, [Reading] にする.
  *
- * node, ts, temperature_c のどれかがない, または, 数値として読めないときは, null (その項目は, 除く).
+ * node, ts, temperature_c のどれかがないか, 数値として読めないときは null (その項目は除く).
  *
  * @param item DynamoDB の 1 件
  * @return [Reading]. 読めないときは, null

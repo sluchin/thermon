@@ -40,11 +40,11 @@ fun findOutdoor(nodes: List<NodeSpec>): NodeSpec? = nodes.firstOrNull { it.label
  *
  * 温度が [FREEZING_BELOW_C] 未満なら [OutdoorAlert.FREEZING], 湿度が [HUMID_ABOVE] を超えていれば
  * [OutdoorAlert.HUMID] (ちょうどの値は, 通知しない). 湿度がない測定値は, 湿度を判定しない.
- * 測定が止まっているとき (古い測定値) は, 状態が分からないので, null を返す.
+ * 測定が止まっているとき (古い測定値) は, 状態が分からないので null を返す.
  *
  * @param reading 最新の測定値
  * @param nowTs 現在の時刻 (UNIX 時刻 (s))
- * @return 通知する状態 (なければ, 空). 測定値が古いときは, null
+ * @return 通知する状態 (なければ空). 測定値が古いときは, null
  */
 fun detectAlerts(
     reading: Reading,
@@ -62,7 +62,7 @@ fun detectAlerts(
 /**
  * 今の状態のうち, まだ通知していないものを求める.
  *
- * 通知したあと, その状態が続く間は, 通知しない. 状態が解消してから, また起きたときは, 通知する
+ * 通知したあと, その状態が続く間は通知しない. 状態が解消してから, また起きたときは通知する
  * (呼び出し元が, 今の状態を「通知した状態」として保存し直す).
  *
  * @param current 今の状態

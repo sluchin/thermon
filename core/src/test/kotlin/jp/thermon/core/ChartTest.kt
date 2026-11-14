@@ -107,7 +107,7 @@ class ChartTest {
         assertNull(buildChartSeries(listOf(reading(1500, 1.0)), WINDOW, 1.0) { it.humidity })
     }
 
-    /** 測定値のない区切りが 2 つまでなら, 線をつなぐ. 3 つ以上なら, そこで切る. */
+    /** 測定値のない区切りが 2 つまでなら, 線をつなぐ. 3 つ以上ならそこで切る. */
     @Test
     fun buildSplitsAtGap() {
         // 区切りの番号: 0, 1 (連続), 4 (2 つ空き: つなぐ), 8 (3 つ空き: 切る), 9 (連続)
@@ -121,7 +121,7 @@ class ChartTest {
         assertEquals(listOf(1850L, 1950L), series.segments[1].map { it.ts })
     }
 
-    /** 保持する時間 (holdSeconds) までの穴は, 区切りの数が多くても, 線をつなぐ. それを超えたら切る. */
+    /** 保持する時間 (holdSeconds) までの穴は, 区切りの数が多くても線をつなぐ. それを超えたら切る. */
     @Test
     fun buildHoldsLongerGap() {
         // 区切りの番号: 0, 4 (3 つ空き: 300 s), 9 (4 つ空き: 400 s). 保持 450 s なら全部つなぎ, 350 s なら 2 つ目の穴で切る
@@ -142,7 +142,7 @@ class ChartTest {
         )
     }
 
-    /** 日付で選んだ窓は, 開始の日の 0 時から, 終了の日の終わりまで. 区切りは, 長さを 120 で割る. */
+    /** 日付で選んだ窓は, 開始の日の 0 時から終了の日の終わりまで. 区切りは, 長さを 120 で割る. */
     @Test
     fun customWindowCoversWholeDays() {
         val zone = ZoneOffset.UTC
@@ -192,7 +192,7 @@ class ChartTest {
         assertEquals(31.0, series.maxValue, DELTA)
     }
 
-    /** 縦軸は, 値の幅が最小の幅より小さいときは, 中心を保って, 最小の幅まで広げる. */
+    /** 縦軸は, 値の幅が最小の幅より小さいときは, 中心を保って最小の幅まで広げる. */
     @Test
     fun buildWidensNarrowSpan() {
         val readings = listOf(reading(1050, 20.0), reading(1150, 20.2))
@@ -203,7 +203,7 @@ class ChartTest {
         assertEquals(20.6, series.maxValue, DELTA)
     }
 
-    /** 値が 1 点だけのときも, 最小の幅で, 縦軸を作る. */
+    /** 値が 1 点だけのときも, 最小の幅で縦軸を作る. */
     @Test
     fun buildSinglePoint() {
         val series =
@@ -215,7 +215,7 @@ class ChartTest {
         assertEquals(22.0, series.maxValue, DELTA)
     }
 
-    /** 共通の軸は, 縦軸が, 全ての線が入る範囲で, 横軸が, 先頭の線の窓になる. */
+    /** 共通の軸は, 縦軸が全ての線が入る範囲で, 横軸が先頭の線の窓になる. */
     @Test
     fun commonAxisCoversAllSeries() {
         val a = ChartSeries(emptyList(), WINDOW, 18.0, 24.0)
@@ -225,7 +225,7 @@ class ChartTest {
         assertEquals(ChartAxis(WINDOW, 18.0, 24.0), commonAxis(listOf(a)))
     }
 
-    /** 線がないときは, 共通の軸も, ない. */
+    /** 線がないときは, 共通の軸もない. */
     @Test
     fun commonAxisEmpty() {
         assertNull(commonAxis(emptyList()))

@@ -22,7 +22,7 @@ import java.util.concurrent.TimeoutException
 /** 1 つのログファイルの上限 (バイト). */
 private const val MAX_LOG_BYTES = 1024L * 1024L
 
-/** 残す, 古いログファイルの数 (全部で, 約 4 MB). */
+/** 残す, 古いログファイルの数 (全部で約 4 MB). */
 private const val MAX_LOG_BACKUPS = 3
 
 /** 落ちたときに, ログファイルに書き終えるのを待つ時間 (ms). */
@@ -33,15 +33,15 @@ private const val CRASH_TAG = "Crash"
 
 /**
  * アプリのログ. Android の logcat (`adb logcat -s Readings:D` のように, タグで絞って見る) と,
- * アプリのファイル (`files/logs/app.log`. 1 MB で切り替えて, 古いものを 3 つ残す) の両方に出す.
- * ファイルのログは, アプリの「Log」の画面 ([LogActivity]) で見て, 保存できる.
+ * アプリのファイル (`files/logs/app.log`. 1 MB で切り替えて古いものを 3 つ残す) の両方に出す.
+ * ファイルのログは, アプリの「Log」の画面 ([LogActivity]) で見て保存できる.
  *
  * - [d]: デバッグ版 (`BuildConfig.DEBUG`) だけ出す. リリース版では, 文字列も作らない (引数は, 文字列を
  *   返す関数).
  * - [i], [w], [e]: デバッグ版とリリース版の両方で出す. リリース版で出すのは, 最低限の情報 (何をしたか, 何匹か)
  *   と, 警告とエラーだけ.
  *
- * AWS の認証情報と, 鍵は, どのレベルでも, ログに書かない.
+ * AWS の認証情報と, 鍵は, どのレベルでもログに書かない.
  * アプリが落ちたときの例外も, ファイルに書く ([init]). Google Play で公開したら,
  * Play Console の Android Vitals も, 例外と ANR を集める.
  */
@@ -64,7 +64,7 @@ object AppLog {
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, error ->
             writeAndWait(LogLevel.ERROR, CRASH_TAG, "Uncaught exception in ${thread.name}", error)
-            // Android の通常の処理 (logcat に出して, アプリを終える) に渡す
+            // Android の通常の処理 (logcat に出してアプリを終える) に渡す
             previous?.uncaughtException(thread, error)
         }
     }
@@ -159,7 +159,7 @@ object AppLog {
     }
 
     /**
-     * ログファイルに書いて, 書き終えるのを待つ (落ちたとき. 先に頼んだログも, 順に書き終わる).
+     * ログファイルに書いて, 書き終えるのを待つ (落ちたとき. 先に頼んだログも順に書き終わる).
      *
      * @param level 重大度
      * @param tag タグ

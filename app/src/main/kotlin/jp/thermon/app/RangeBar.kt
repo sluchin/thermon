@@ -15,7 +15,7 @@ import jp.thermon.core.ChartRange
 import java.time.LocalDate
 import java.time.ZoneId
 
-/** ボタンの幅の重み (ボタンの数で, 均等に分ける). */
+/** ボタンの幅の重み (ボタンの数で均等に分ける). */
 private const val BUTTON_WEIGHT = 1f
 
 /** 近道のボタンの左右の余白 (dp). 6 個が, 狭い画面に入るように, 小さくする. */
@@ -116,7 +116,7 @@ class RangeBar(
         onDates(from ?: last, last)
     }
 
-    /** 選んだ日付を消して, 通知する. */
+    /** 選んだ日付を消して通知する. */
     private fun clear() {
         fromDate = null
         toDate = null
@@ -140,7 +140,7 @@ class RangeBar(
      *
      * @param selected 選んでいる日 (選んでいないときは, null. カレンダーは, 今日から始める)
      * @param first 選べる最初の日 (制限しないときは, null)
-     * @param last 選べる最後の日 (null なら, 今日)
+     * @param last 選べる最後の日 (null なら今日)
      * @param picked 日付を選んだときの処理
      */
     private fun pick(

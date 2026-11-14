@@ -17,7 +17,7 @@ import jp.thermon.core.NodeSpec
 import jp.thermon.core.formatReading
 import java.time.ZoneId
 
-/** 機器の線の色 (機器の並びの順. 足りなければ, 繰り返す): 橙, 青, 緑, 紫. */
+/** 機器の線の色 (機器の並びの順. 足りなければ繰り返す): 橙, 青, 緑, 紫. */
 private val NODE_COLORS =
     intArrayOf(0xFFE57300.toInt(), 0xFF2196F3.toInt(), 0xFF43A047.toInt(), 0xFF8E24AA.toInt())
 
@@ -27,7 +27,7 @@ private const val SECTION_GAP_DP = 8
 /** グラフの高さ (dp). */
 private const val CHART_HEIGHT_DP = 200
 
-/** ボタンの幅の重み (ボタンの数で, 均等に分ける). */
+/** ボタンの幅の重み (ボタンの数で均等に分ける). */
 private const val BUTTON_WEIGHT = 1f
 
 /**
@@ -111,7 +111,7 @@ class ChartsPanel(
      * @param spec 機器
      * @param result 取り出した結果 (まだなら, null)
      * @param loadingText 取り出し中の文字
-     * @return 表示する文字列 (表示名があれば, 先頭に付ける)
+     * @return 表示する文字列 (表示名があれば先頭に付ける)
      */
     private fun readingText(
         spec: NodeSpec,
@@ -211,7 +211,7 @@ class ChartsPanel(
      * 機器の線の色.
      *
      * @param index 機器の位置
-     * @return 色 (色の数を超えたら, 繰り返す)
+     * @return 色 (色の数を超えたら繰り返す)
      */
     private fun colorOf(index: Int): Int = NODE_COLORS[index % NODE_COLORS.size]
 }

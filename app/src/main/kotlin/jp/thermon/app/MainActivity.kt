@@ -64,7 +64,7 @@ class MainActivity : Activity() {
     private var loadJob: Job? = null
 
     /**
-     * 画面を作って, 測定値を取り出して, 表示する.
+     * 画面を作って, 測定値を取り出して表示する.
      *
      * @param savedInstanceState 保存した状態
      */
@@ -94,7 +94,7 @@ class MainActivity : Activity() {
         reload()
     }
 
-    /** 室外の通知のために, 通知の許可を求める (Android 13 以降. 許可済みなら, 何も出ない). */
+    /** 室外の通知のために, 通知の許可を求める (Android 13 以降. 許可済みなら何も出ない). */
     private fun requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 0)
@@ -128,7 +128,7 @@ class MainActivity : Activity() {
         ).also { rangeBar = it }
 
     /**
-     * 選んでいる範囲の窓を作る (近道なら, 現在までの範囲. 日付なら, その日の 0 時から).
+     * 選んでいる範囲の窓を作る (近道なら現在までの範囲. 日付ならその日の 0 時から).
      *
      * @param nowTs 現在の時刻 (UNIX 時刻 (s))
      * @return 窓
@@ -153,7 +153,7 @@ class MainActivity : Activity() {
      * 機器ごとに, 測定値を取り出して, 表示する (取り出し中の処理があれば, 止める).
      *
      * 端末に保存した測定値を, すぐに表示する. そのあと, AWS の新しい測定値を, 機器ごとに並べて取り出し,
-     * 取り出せた機器から, 表示を更新する. 取り出しに失敗した機器は, エラーのメッセージを表示する
+     * 取り出せた機器から表示を更新する. 取り出しに失敗した機器は, エラーのメッセージを表示する
      * (ほかの機器は, 続ける).
      */
     private fun reload() {

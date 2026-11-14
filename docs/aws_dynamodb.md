@@ -47,7 +47,7 @@ thermon ──> Cognito ID プール (未認証) ──一時的な認証情報�
 
 ### 1.3 制限
 
-- **取り出し方**: 機器 (`node`) を指定して、時刻の範囲で取り出します。「全ての機器の、ある時刻のデータ」は 1 回では取り出せません (機器ごとに、取り出します)。
+- **取り出し方**: 機器 (`node`) を指定して時刻の範囲で取り出します。「全ての機器の、ある時刻のデータ」は 1 回では取り出せません (機器ごとに、取り出します)。
 - **集計**: 平均や最大値はアプリ側で計算します (DynamoDB は集計しません)。
 - **件数と料金**: 10 秒に 1 件だと、1 台で 1 日に 8,640 件、1 か月に約 26 万件です。書き込みはオンデマンドの課金です。保存が増え続けないように、古い項目を自動で消します (TTL。2.1)。料金はリージョンごとの料金表で確認してください。
 
@@ -94,7 +94,7 @@ IoT Core がテーブルに書き込むためのロールを作ります。ロ�
 
 ### 3.0 共通の変数
 
-以降のコマンドは同じシェルで、続けて実行します (シェルを閉じたら、次の変数を設定し直します)。アカウント ID (12 桁の数字) はコマンドで取り出して、変数に入れるので、ファイルや文書に書き写しません。
+以降のコマンドは同じシェルで、続けて実行します (シェルを閉じたら次の変数を設定し直します)。アカウント ID (12 桁の数字) はコマンドで取り出して、変数に入れるので、ファイルや文書に書き写しません。
 
 ```bash
 export AWS_REGION=ap-northeast-1
@@ -148,7 +148,7 @@ aws iam put-role-policy --role-name thermo-iot-dynamodb \
 
 ### 4.1 SQL の意味
 
-この SQL は単独では実行しません。4.2 の `rule-dynamodb.json` の `"sql"` に 1 行で入れてあります (4.2 のコマンドで、ルールと一緒に登録されます)。ここでは、その意味だけを説明します。
+この SQL は単独では実行しません。4.2 の `rule-dynamodb.json` の `"sql"` に 1 行で入れてあります (4.2 のコマンドで、ルールと一緒に登録されます)。ここではその意味だけを説明します。
 
 ```sql
 SELECT *, floor(timestamp() / 1000) AS ts, floor(timestamp() / 1000) + 2592000 AS expires_at
@@ -194,13 +194,13 @@ aws iot get-topic-rule --rule-name thermo_to_dynamodb
 
 ## 5. データが届いているか確認する
 
-ゲートウェイを動かして、少し待ってから、確認します。
+ゲートウェイを動かして、少し待ってから確認します。
 
 ```bash
-# 件数と、最新の数件 (Scan は、少量のテーブルで、確認に使うだけにしてください)
+# 件数と, 最新の数件 (Scan は, 少量のテーブルで, 確認に使うだけにしてください)
 aws dynamodb scan --table-name "$TABLE" --max-items 5
 
-# 機器を指定して、最新の 3 件を取り出す
+# 機器を指定して, 最新の 3 件を取り出す
 aws dynamodb query --table-name "$TABLE" \
   --key-condition-expression "#n = :n" \
   --expression-attribute-names '{"#n":"node"}' \
@@ -263,7 +263,7 @@ aws iam create-role --role-name thermo-client-unauth \
 aws iam put-role-policy --role-name thermo-client-unauth \
   --policy-name read-thermo --policy-document file://unauth-read.json
 
-# ID プールに、未認証ロールとして登録する
+# ID プールに, 未認証ロールとして登録する
 aws cognito-identity set-identity-pool-roles \
   --identity-pool-id "${IDENTITY_POOL_ID}" \
   --roles "unauthenticated=arn:aws:iam::${ACCOUNT_ID}:role/thermo-client-unauth"
@@ -281,7 +281,7 @@ aws cognito-identity get-identity-pool-roles \
 
 - 権限は `dynamodb:Query` だけをこのテーブルだけに付けます (上のポリシーのとおり)。書き込み、削除、ほかのサービスは付けません。
 - アクセスキーをアプリに埋め込みません。必ずCognito の一時的な認証情報を使います。
-- アプリをほかの人に配るときは Cognito のユーザープールによるログインに替えます (今は自分だけなので、未認証ロールで進めます)。
+- アプリをほかの人に配るときは Cognito のユーザープールによるログインに替えます (今は自分だけなので未認証ロールで進めます)。
 
 ## 7. thermon から読む
 
@@ -294,7 +294,7 @@ thermon.table=thermo-readings
 thermon.nodes=<機器の MAC アドレス (コンマ区切り)>
 ```
 
-- `CognitoUnauthenticatedCredentials` が 6.1 の ID プールから、未認証の ID と、一時的な認証情報を受け取ります (期限の 5 分前まで、使い回します)。
+- `CognitoUnauthenticatedCredentials` が 6.1 の ID プールから、未認証の ID と、一時的な認証情報を受け取ります (期限の 5 分前まで使い回します)。
 - `DynamoDbReadings` が `node` と `ts` の範囲で `Query` します (結果が 1 MB を超えるときは `lastEvaluatedKey` で続きを取り出します)。
 - `ts` と `node` は DynamoDB の予約語と重なるおそれがあるので、`expressionAttributeNames` で別名にしています。
 - `Query` は 1 回に最大 1 MB までです。10 秒に 1 件の 1 日分 (8,640 件) は 1 回で入らないことがあります。
@@ -304,7 +304,7 @@ thermon.nodes=<機器の MAC アドレス (コンマ区切り)>
 Thermo ノードに気圧センサを付けると (esp32-thermo-system の `docs/setup.md` の「Thermo ノードのセンサ」)、項目に `pressure_hpa` が増えます。**AWS 側の設定は変えません** (ルールは `SELECT *`、テーブルはキーのほかの属性を決めない、未認証ロールの権限は `dynamodb:Query` だけで属性によらない)。
 
 - thermon は `pressure_hpa` を読んで、最新の値の 1 行 (`1013.2 hPa`) と、気圧のグラフ (`Pressure`) に出します。気圧のない機器 (SwitchBot、DHT11 のノード) は、気圧のグラフに線が出ません。
-- 端末に保存した測定値 (SQLite) にも、気圧の列を足しました (データベースの版 2)。アプリを更新すると、保存してあった測定値は消さずに、列だけを足します (それまでの測定値の気圧は、なし)。
+- 端末に保存した測定値 (SQLite) にも、気圧の列を足しました (データベースの版 2)。アプリを更新すると、保存してあった測定値は消さずに、列だけを足します (それまでの測定値の気圧はなし)。
 - 気圧が届いているかは、esp32-thermo-system の `docs/aws_setup.md` の 8.1 のコマンドで確かめます。
 
 ## 8. これから

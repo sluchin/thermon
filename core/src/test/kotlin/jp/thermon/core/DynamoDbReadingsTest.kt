@@ -51,7 +51,7 @@ class DynamoDbReadingsTest {
         coEvery { client.query(capture(requests)) } returnsMany responses.toList()
     }
 
-    /** 範囲の指定で, 古い順の測定値を返す. */
+    /** 範囲の指定で古い順の測定値を返す. */
     @Test
     fun rangeReturnsReadings() =
         runTest {
@@ -96,7 +96,7 @@ class DynamoDbReadingsTest {
             assertNull(request.exclusiveStartKey)
         }
 
-    /** 結果が 1 回に収まらないとき (lastEvaluatedKey がある) は, 続きを取り出して, つなげる. */
+    /** 結果が 1 回に収まらないとき (lastEvaluatedKey がある) は, 続きを取り出してつなげる. */
     @Test
     fun rangeFollowsPagination() =
         runTest {
@@ -117,7 +117,7 @@ class DynamoDbReadingsTest {
             assertEquals(lastKey, requests[1].exclusiveStartKey)
         }
 
-    /** 読めない項目 (温度がない, 数値でない, 時刻が数値でない, 型が違う) は, 除く. */
+    /** 読めない項目 (温度がない, 数値でない, 時刻が数値でない, 型が違う) は除く. */
     @Test
     fun rangeSkipsUnreadableItems() =
         runTest {
