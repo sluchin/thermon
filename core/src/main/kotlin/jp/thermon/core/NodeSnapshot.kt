@@ -69,6 +69,49 @@ suspend fun loadSnapshot(
     if (failure != null && latest == null) {
         throw failure
     }
+    return buildSnapshot(
+        store,
+        node,
+        window,
+        latest,
+        failure?.let { it.message ?: it.toString() },
+    )
+}
+
+/**
+ * 1 台の機器の, 端末に保存した測定値だけから, 画面に表示する内容にする (AWS には, つながない).
+ *
+ * 画面を, すぐに表示するために使う (AWS への接続を待たない). 保存した測定値が 1 件もないときは, 最新の
+ * 測定値も, グラフもない内容になる.
+ *
+ * @param store 端末の保存先
+ * @param node 機器の識別子
+ * @param window グラフの窓
+ * @return 画面に表示する内容 ([NodeSnapshot.syncError] は null)
+ */
+fun loadStoredSnapshot(
+    store: ReadingStore,
+    node: String,
+    window: ChartWindow,
+): NodeSnapshot = buildSnapshot(store, node, window, store.latest(node), null)
+
+/**
+ * 保存した測定値から, 画面に表示する内容を作る.
+ *
+ * @param store 端末の保存先
+ * @param node 機器の識別子
+ * @param window グラフの窓
+ * @param latest 最新の測定値 (ないときは, null)
+ * @param syncError AWS から取り出せなかったときの, エラーのメッセージ (ないときは, null)
+ * @return 画面に表示する内容
+ */
+private fun buildSnapshot(
+    store: ReadingStore,
+    node: String,
+    window: ChartWindow,
+    latest: Reading?,
+    syncError: String?,
+): NodeSnapshot {
     val readings =
         withHeldEnds(
             store.range(node, window.fromTs, window.toTs),
@@ -103,7 +146,7 @@ suspend fun loadSnapshot(
                 PRESSURE_MIN_SPAN,
                 HOLD_SECONDS,
             ) { it.pressureHpa },
-        syncError = failure?.let { it.message ?: it.toString() },
+        syncError = syncError,
     )
 }
 

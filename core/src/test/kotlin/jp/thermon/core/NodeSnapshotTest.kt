@@ -49,6 +49,32 @@ class NodeSnapshotTest {
             )
         }
 
+    /** 端末に保存した測定値だけで, 最新の測定値とグラフを作る (AWS にはつながない. エラーはなし). */
+    @Test
+    fun loadStoredSnapshotUsesOnlyStore() {
+        val store =
+            FakeStore(mutableListOf(sample(NOW - 100, 20.0, 40.0), sample(NOW - 10, 21.0, 50.0)))
+
+        val snapshot = loadStoredSnapshot(store, NODE, WINDOW)
+
+        assertEquals(NOW - 10, snapshot.latest?.ts)
+        assertNull(snapshot.syncError)
+        assertEquals(
+            listOf(20.0, 21.0),
+            assertNotNull(snapshot.temperature).segments.flatten().map { it.value },
+        )
+    }
+
+    /** 保存した測定値が 1 件もなければ, 最新の測定値も, グラフもない. */
+    @Test
+    fun loadStoredSnapshotWithoutReadings() {
+        val snapshot = loadStoredSnapshot(FakeStore(), NODE, WINDOW)
+
+        assertNull(snapshot.latest)
+        assertNull(snapshot.temperature)
+        assertNull(snapshot.syncError)
+    }
+
     /** 窓の外の保存した測定値は, グラフに入れない. 窓の中が空なら, どちらのグラフも作らない. */
     @Test
     fun loadSnapshotOnlyUsesWindow() =

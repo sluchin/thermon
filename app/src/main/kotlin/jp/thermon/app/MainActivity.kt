@@ -22,12 +22,14 @@ import jp.thermon.core.ReadingStore
 import jp.thermon.core.ReadingsRepository
 import jp.thermon.core.customWindow
 import jp.thermon.core.loadSnapshot
+import jp.thermon.core.loadStoredSnapshot
 import jp.thermon.core.parseNodes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -150,8 +152,9 @@ class MainActivity : Activity() {
     /**
      * 機器ごとに, 測定値を取り出して, 表示する (取り出し中の処理があれば, 止める).
      *
-     * 取り出しに失敗した機器は, エラーのメッセージを表示する (ほかの機器は, 続ける).
-     * 機器が 1 台取り出せるたびに, 表示を更新する.
+     * 端末に保存した測定値を, すぐに表示する. そのあと, AWS の新しい測定値を, 機器ごとに並べて取り出し,
+     * 取り出せた機器から, 表示を更新する. 取り出しに失敗した機器は, エラーのメッセージを表示する
+     * (ほかの機器は, 続ける).
      */
     private fun reload() {
         val source = repository
@@ -166,24 +169,59 @@ class MainActivity : Activity() {
             loadJob =
                 scope.launch {
                     val loaded = mutableMapOf<String, Result<NodeSnapshot>>()
+                    // 端末に保存した測定値を, すぐに表示する (AWS への接続を待たない)
+                    // (保存した測定値のない機器は, 取り出し中のままにする)
                     for (node in nodes) {
-                        loaded[node] =
-                            runCatching { loadSnapshot(source, saved, node, window, nowTs) }
-                                .onSuccess { AppLog.d(TAG) { "Loaded the readings of $node" } }
-                                .onFailure {
-                                    AppLog.w(
-                                        TAG,
-                                        "Could not load the readings of $node",
-                                        it,
-                                    )
-                                }
-                        // 範囲を選び直して, 止められたときは, 古い結果を表示しない
-                        ensureActive()
-                        val shown = loaded.toMap()
-                        runOnUiThread { view.show(shown, ZoneId.systemDefault()) }
+                        val stored = runCatching { loadStoredSnapshot(saved, node, window) }
+                        if (stored.getOrNull()?.latest != null) {
+                            loaded[node] = stored
+                        }
+                    }
+                    ensureActive()
+                    show(view, loaded)
+                    // AWS の新しい測定値を, 機器ごとに並べて取り出して, 取り出せたものから表示を更新する
+                    coroutineScope {
+                        for (node in nodes) {
+                            launch {
+                                val result =
+                                    runCatching { loadSnapshot(source, saved, node, window, nowTs) }
+                                        .onSuccess {
+                                            AppLog.d(
+                                                TAG,
+                                            ) { "Loaded the readings of $node" }
+                                        }.onFailure {
+                                            AppLog.w(
+                                                TAG,
+                                                "Could not load the readings of $node",
+                                                it,
+                                            )
+                                        }
+                                // 範囲を選び直して, 止められたときは, 古い結果を表示しない
+                                ensureActive()
+                                val shown =
+                                    synchronized(loaded) {
+                                        loaded[node] = result
+                                        loaded.toMap()
+                                    }
+                                show(view, shown)
+                            }
+                        }
                     }
                 }
         }
+    }
+
+    /**
+     * 結果を, 画面のスレッドで表示する.
+     *
+     * @param view 表示する部品
+     * @param shown 機器の識別子ごとの結果
+     */
+    private fun show(
+        view: ChartsPanel,
+        shown: Map<String, Result<NodeSnapshot>>,
+    ) {
+        runOnUiThread { view.show(shown.toMap(), ZoneId.systemDefault()) }
     }
 
     /**
