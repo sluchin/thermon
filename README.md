@@ -124,7 +124,7 @@ docker compose exec emulator adb shell am start -n jp.thermon.app/.MainActivity
 使えるコマンドは次のとおりです (どれも `docker compose run --rm <サービス>`)。
 
 | サービス | 内容 |
-|:---|:---|
+| :--- | :--- |
 | `build` | デバッグ用の APK をビルドする。Kotlin の警告が出たら失敗する |
 | `test` | 単体テストを実行する |
 | `coverage` | `core` の行と分岐のカバレッジが 100% でなければ失敗する |

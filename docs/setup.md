@@ -7,7 +7,7 @@
 ## 方針
 
 | 項目 | 方針 |
-|:---|:---|
+| :--- | :--- |
 | 開発環境 | Docker (Ubuntu 26.04)。JDK、Gradle、Android SDK はイメージに入れる。ホストには Docker と、実機に転送するための adb だけを入れる |
 | エディタ | 何でもよい (Android Studio は使わない)。整形と静的解析はコマンドで実行する |
 | 構成 | 2 つのモジュール。`core` (純粋な Kotlin。AWS のクライアントと、データの処理。単体テストで行と分岐のカバレッジ 100%) と、`app` (Android。画面だけの薄い層) |
@@ -20,7 +20,7 @@
 次の版を使います。版は `gradle/libs.versions.toml` にまとめて書いてあります。
 
 | ツール | 版 | 備考 |
-|:---|:---|:---|
+| :--- | :--- | :--- |
 | JDK | 17 (Ubuntu の `openjdk-17-jdk-headless`) | Android Gradle Plugin は 17 以上が必要。ホストの JDK は使わない |
 | Gradle | 9.8.1 | ラッパー (`./gradlew`) で固定する |
 | Android Gradle Plugin | 9.4.1 | Kotlin を内蔵している。`app` に Kotlin のプラグインを別に入れない |
@@ -115,7 +115,7 @@ app/                             Android (画面だけの薄い層. 設定の読
 `docker-compose.yml` に次のサービスがあります。名前は esp32-thermo-system と同じです。どれも `--rm` を付けて実行します。
 
 | サービス | 内容 | 実行する Gradle のタスク |
-|:---|:---|:---|
+| :--- | :--- | :--- |
 | `dev` | 開発シェル (`bash`) | なし |
 | `build` | デバッグ用の APK をビルドする。警告が出たら失敗する | `:app:assembleDebug` |
 | `test` | 単体テストを実行する | `:core:test` `:app:testDebugUnitTest` |
@@ -177,7 +177,7 @@ AWS 側の準備 (テーブル `thermo-readings`、IoT のルール、ID プー�
 ### クライアント (`core`)
 
 | クラス | 役割 |
-|:---|:---|
+| :--- | :--- |
 | `CognitoUnauthenticatedCredentials` | ID プールから、未認証の ID (`GetId`) と、一時的な認証情報 (`GetCredentialsForIdentity`) を受け取る。ID は最初の 1 回だけ取り、認証情報は期限の 5 分前まで、使い回す。同時に呼ばれても、取得は 1 回 |
 | `DynamoDbReadings` (`ReadingsRepository`) | `range(node, 開始, 終了)`: 機器の、時刻の範囲の値を古い順に取り出す (結果が 1 MB を超えるときは `lastEvaluatedKey` で続きを取り出す)。`latest(node)`: 最新の 1 件を取り出す |
 | `Reading` | 1 件の測定値 (`node`、`ts`、`type`、`temperatureC`、`humidity`、`battery`、`pressureHpa`)。`temperature_c` などがない、または数値として読めない項目は除く |
@@ -359,7 +359,7 @@ AWS の準備 ([aws_dynamodb.md](aws_dynamodb.md)) が終わったあとの手�
 うまくいかないとき:
 
 | 症状 | 確認すること |
-|:---|:---|
+| :--- | :--- |
 | 認証のエラー (`NotAuthorizedException` など) | ID プールで未認証 ID が有効か (6.1 の `--allow-unauthenticated-identities`) |
 | 権限のエラー (`AccessDeniedException`) | 未認証ロールが ID プールに登録されているか (`aws cognito-identity get-identity-pool-roles`)。ポリシーの `Resource` (アカウント ID、テーブル名) |
 | 表示が空 | `thermon.nodes` と、DynamoDB の `node` が一致しているか。手順 1 でデータが入っているか |
@@ -370,7 +370,7 @@ AWS の準備 ([aws_dynamodb.md](aws_dynamodb.md)) が終わったあとの手�
 Push 時に `.github/workflows/build.yml` が開発用の Docker イメージ (Dockerfile の `dev` ステージ) で `docker compose` のサービスを実行します。ローカルと同じ環境です。
 
 | ジョブ | 実行するサービス | 内容 |
-|:---|:---|:---|
+| :--- | :--- | :--- |
 | `check` | `build` / `test` / `coverage` / `format` / `analyze` | 1 サービスずつ、別のジョブで実行する。失敗したら、ジョブが失敗する。ログをアーティファクト `<サービス名>_log` に保存する |
 | `docs` | `docs` | Dokka の HTML を生成する。警告があれば失敗する。生成物をアーティファクト `docs` にログを `docs_log` に保存する |
 | `deploy-docs` | (`docs` の成果物) | main への push のときだけ、ドキュメントを GitHub Pages へ公開する |
@@ -394,7 +394,7 @@ Push 時に `.github/workflows/build.yml` が開発用の Docker イメージ (D
 <https://claude.ai/code> のメッセージ欄の上の、雲のアイコン (環境の名前) から、「Cloud」→ 環境の設定のアイコンでダイアログを開きます。
 
 | 欄 | 入れるもの |
-|:---|:---|
+| :--- | :--- |
 | Network access | 「Custom」。「Allowed domains」に `dl.google.com` と `maven-central.storage-download.googleapis.com` を 1 行ずつ (標準の許可リストも、残す) |
 | Environment variables | `GIT_AUTHOR_NAME` などの 4 行 (コミットの名前)。`GRADLE_HOME_DIR` は要りません (クラウドでは、`scripts/cloud-docker.sh` が `/var/cache/thermon-gradle` を使います) |
 | Setup script | 下 |
@@ -411,7 +411,7 @@ exit 0
 - `run` はミラーに届くかを確かめて、届かないときは `WARNING` を出します (「Allowed domains」の設定が足りないとき)。
 - 環境の変数とセットアップスクリプトの変更は**新しいセッション**から効きます。
 
-### 使い方
+### 使い方 (クラウドのセッション)
 
 ```bash
 scripts/cloud-docker.sh build      # 開発用のイメージ (thermon-dev) を作る. 最初の 1 回 (数分)

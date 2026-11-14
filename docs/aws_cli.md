@@ -81,7 +81,7 @@ aws configure
 4つの項目を順に入力します。
 
 | 項目 | 入力する値 |
-|:---|:---|
+| :--- | :--- |
 | `AWS Access Key ID` | 5章で控えたアクセスキー ID |
 | `AWS Secret Access Key` | 5章で控えたシークレットアクセスキー (入力しても画面には出ない) |
 | `Default region name` | `ap-northeast-1` |
